@@ -1,0 +1,18 @@
+{
+  "name": "derma-agent-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/mobile-user",
+    "apps/web-admin"
+  ],
+  "scripts": {
+    "diagnose:esbuild": "node ./scripts/test-esbuild-spawn.cjs",
+    "dev:user": "npm run dev:h5 --workspace @dermaai/mobile-user",
+    "dev:user:mp-weixin": "npm run dev:mp-weixin --workspace @dermaai/mobile-user",
+    "dev:web": "npm run dev --workspace @dermaai/web-admin",
+    "build:user": "npm run build:h5 --workspace @dermaai/mobile-user",
+    "build:user:mp-weixin": "npm run build:mp-weixin --workspace @dermaai/mobile-user",
+    "build:web": "npm run build --workspace @dermaai/web-admin"
+  }
+}

@@ -1,0 +1,42 @@
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Node / Frontend
+node_modules/
+dist/
+.vite/
+.turbo/
+
+# uni-app
+.hbuilderx/
+unpackage/
+
+# Editor / OS
+.idea/
+.vscode/
+Thumbs.db
+Desktop.ini
+
+# Runtime files
+*.log
+apps/backend/storage/uploads/
+
+# 忽略这几个文档
+肤联智诊_接口文档.md
+肤联智诊_系统分析文档.md
+肤联智诊_系统设计文档.md
+fu_lian_zhizhen_tech_stack.md

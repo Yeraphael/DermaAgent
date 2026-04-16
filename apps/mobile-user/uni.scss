@@ -1,0 +1,116 @@
+$bg-deep: #071522;
+$bg-soft: #10243b;
+$card-bg: rgba(15, 31, 48, 0.82);
+$card-border: rgba(184, 220, 255, 0.14);
+$accent: #59e4c2;
+$accent-blue: #82b9ff;
+$text-main: #f3f8ff;
+$text-sub: #90a9c6;
+
+page {
+  background:
+    radial-gradient(circle at top left, rgba(43, 177, 160, 0.22), transparent 30%),
+    radial-gradient(circle at top right, rgba(77, 125, 255, 0.2), transparent 24%),
+    linear-gradient(180deg, #071522 0%, #0b1d30 54%, #07111b 100%);
+  color: $text-main;
+  min-height: 100%;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+.page-wrap {
+  min-height: 100vh;
+  padding: 24rpx 28rpx 180rpx;
+}
+
+.safe-top {
+  padding-top: calc(var(--status-bar-height) + 18rpx);
+}
+
+.glass-card {
+  border: 1px solid $card-border;
+  border-radius: 34rpx;
+  background: linear-gradient(180deg, rgba(18, 35, 54, 0.86), rgba(8, 19, 31, 0.74));
+  box-shadow: 0 22rpx 70rpx rgba(2, 8, 16, 0.36);
+  backdrop-filter: blur(28rpx);
+}
+
+.section-title {
+  font-size: 40rpx;
+  font-weight: 700;
+}
+
+.section-subtitle {
+  margin-top: 12rpx;
+  color: $text-sub;
+  font-size: 24rpx;
+  line-height: 1.7;
+}
+
+.primary-btn {
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 30rpx;
+  text-align: center;
+  font-weight: 700;
+  color: #04212a;
+  background: linear-gradient(135deg, #2cbca6, #68e0cc);
+}
+
+.outline-btn {
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 28rpx;
+  text-align: center;
+  color: $text-main;
+  border: 1px solid $card-border;
+  background: rgba(9, 19, 31, 0.66);
+}
+
+.label {
+  color: $text-sub;
+  font-size: 24rpx;
+}
+
+.input-box,
+.textarea-box,
+.picker-box {
+  width: 100%;
+  border-radius: 26rpx;
+  padding: 26rpx;
+  border: 1px solid rgba(184, 220, 255, 0.12);
+  background: rgba(8, 18, 30, 0.68);
+  color: $text-main;
+  font-size: 28rpx;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.chip {
+  padding: 14rpx 22rpx;
+  border-radius: 999rpx;
+  background: rgba(89, 228, 194, 0.12);
+  color: #d6fff5;
+  font-size: 24rpx;
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.stat-item {
+  padding: 24rpx;
+  border-radius: 28rpx;
+  background: rgba(9, 19, 31, 0.72);
+}
+
+.stat-item .num {
+  margin-top: 10rpx;
+  font-size: 46rpx;
+  font-weight: 700;
+}
