@@ -1,83 +1,65 @@
 <script setup lang="ts">
 import { onShow } from '@dcloudio/uni-app'
-import { reactive } from 'vue'
+import { ref } from 'vue'
 
-import { ensureLogin, request } from '../../utils/api'
+import { getPortalConsultations, getPortalProfile, getPortalRiskLabel } from '../../shared/portal'
+import { ensurePortalLogin } from '../../utils/miniPortal'
 
-const form = reactive({
-  allergy_history: '',
-  past_medical_history: '',
-  medication_history: '',
-  skin_type: '',
-  skin_sensitivity: '',
-  sleep_pattern: '',
-  diet_preference: '',
-  special_notes: '',
+const profile = ref(getPortalProfile())
+const cases = ref(getPortalConsultations().slice(0, 3))
+
+function riskClass(risk: 'LOW' | 'MEDIUM' | 'HIGH') {
+  return risk === 'HIGH' ? 'rose' : risk === 'MEDIUM' ? 'amber' : 'mint'
+}
+
+onShow(() => {
+  if (!ensurePortalLogin()) return
+  profile.value = getPortalProfile()
+  cases.value = getPortalConsultations().slice(0, 3)
 })
-
-async function loadData() {
-  if (!ensureLogin()) return
-  const data = await request<any>('/user/health-profile')
-  Object.assign(form, data)
-}
-
-async function saveData() {
-  try {
-    await request('/user/health-profile', {
-      method: 'PUT',
-      data: form,
-    })
-    uni.showToast({ title: '健康档案已保存', icon: 'success' })
-  } catch (error: any) {
-    uni.showToast({ title: error.message || '保存失败', icon: 'none' })
-  }
-}
-
-onShow(loadData)
 </script>
 
 <template>
   <view class="page-wrap safe-top">
-    <view class="glass-card" style="padding: 34rpx;">
-      <view class="section-title">健康档案</view>
-      <view class="section-subtitle">完善既往史、肤质、敏感程度和生活习惯，便于后续 AI 与医生更准确理解你的皮肤状态。</view>
+    <view class="mini-card" style="padding: 34rpx;">
+      <view class="mini-eyebrow">健康档案</view>
+      <view class="mini-title" style="margin-top: 12rpx;">你的皮肤健康档案</view>
+      <view class="mini-subtitle">把最近的风险趋势、护理建议和历史问诊沉淀成连续可追踪的档案信息。</view>
+    </view>
 
-      <view style="display: grid; gap: 18rpx; margin-top: 24rpx;">
-        <view>
-          <view class="label">过敏史</view>
-          <textarea v-model="form.allergy_history" class="textarea-box" />
-        </view>
-        <view>
-          <view class="label">既往病史</view>
-          <textarea v-model="form.past_medical_history" class="textarea-box" />
-        </view>
-        <view>
-          <view class="label">近期用药</view>
-          <textarea v-model="form.medication_history" class="textarea-box" />
-        </view>
-        <view>
-          <view class="label">肤质</view>
-          <input v-model="form.skin_type" class="input-box" placeholder="例如：敏感性 / 混合性" />
-        </view>
-        <view>
-          <view class="label">敏感程度</view>
-          <input v-model="form.skin_sensitivity" class="input-box" placeholder="例如：中度敏感" />
-        </view>
-        <view>
-          <view class="label">睡眠情况</view>
-          <input v-model="form.sleep_pattern" class="input-box" placeholder="例如：偶尔熬夜" />
-        </view>
-        <view>
-          <view class="label">饮食偏好</view>
-          <input v-model="form.diet_preference" class="input-box" placeholder="例如：偏甜偏辣" />
-        </view>
-        <view>
-          <view class="label">补充备注</view>
-          <textarea v-model="form.special_notes" class="textarea-box" />
+    <view class="mini-space" />
+
+    <view class="mini-grid-2">
+      <view class="mini-card" style="padding: 28rpx;">
+        <view class="mini-card-title">风险趋势</view>
+        <view v-for="item in profile.healthArchive.riskTrend" :key="item" class="mini-item" style="margin-top: 18rpx;">
+          <view class="mini-item-title">趋势记录</view>
+          <view class="mini-item-copy">{{ item }}</view>
         </view>
       </view>
 
-      <view style="margin-top: 30rpx;" class="primary-btn" @click="saveData">保存健康档案</view>
+      <view class="mini-card" style="padding: 28rpx;">
+        <view class="mini-card-title">关键信息</view>
+        <view class="mini-item" style="margin-top: 18rpx;">
+          <view class="mini-item-title">皮肤类型</view>
+          <view class="mini-item-copy">{{ profile.healthArchive.skinType }}</view>
+        </view>
+        <view class="mini-item" style="margin-top: 18rpx;">
+          <view class="mini-item-title">最近医生</view>
+          <view class="mini-item-copy">{{ profile.healthArchive.latestDoctor }}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="mini-space" />
+
+    <view class="mini-card" style="padding: 30rpx;">
+      <view class="mini-card-title">最近病例</view>
+      <view v-for="item in cases" :key="item.caseId" class="mini-item" style="margin-top: 18rpx;">
+        <view class="mini-item-title">{{ item.title }}</view>
+        <view class="mini-item-copy">{{ item.description }}</view>
+        <view class="mini-badge" :class="riskClass(item.riskLevel)" style="margin-top: 14rpx;">{{ getPortalRiskLabel(item.riskLevel) }}</view>
+      </view>
     </view>
   </view>
 </template>

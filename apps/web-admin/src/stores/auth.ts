@@ -1,49 +1,50 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
-import { client } from '@/api/client'
+import { loginControlCenter, type ControlCenterAccount } from '@/data/controlCenter'
 
-type Account = {
-  account_id: number
-  username: string
-  role_type: 'USER' | 'DOCTOR' | 'ADMIN'
-}
+const TOKEN_KEY = 'derma-admin-token'
+const ACCOUNT_KEY = 'derma-admin-account'
+
+type StoredAccount = ControlCenterAccount | null
 
 export const useAuthStore = defineStore('auth', () => {
-  const token = ref(localStorage.getItem('derma-admin-token') || '')
-  const account = ref<Account | null>(localStorage.getItem('derma-admin-account') ? JSON.parse(localStorage.getItem('derma-admin-account') as string) : null)
+  const token = ref(localStorage.getItem(TOKEN_KEY) || '')
+  const account = ref<StoredAccount>(
+    localStorage.getItem(ACCOUNT_KEY)
+      ? (JSON.parse(localStorage.getItem(ACCOUNT_KEY) as string) as ControlCenterAccount)
+      : null,
+  )
 
   const isLoggedIn = computed(() => Boolean(token.value))
   const role = computed(() => account.value?.role_type || '')
+  const avatar = computed(() => (account.value?.role_type === 'ADMIN'
+    ? 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%25%22 y1=%220%25%22 x2=%22100%25%22 y2=%22100%25%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23dbe8ff%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23c7d4ff%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22120%22 height=%22120%22 rx=%2236%22 fill=%22url(%23g)%22/%3E%3Ccircle cx=%2260%22 cy=%2244%22 r=%2221%22 fill=%22rgba(255,255,255,.88)%22/%3E%3Cpath d=%22M24 102c6-19 20-29 36-29s30 10 36 29%22 fill=%22rgba(255,255,255,.88)%22/%3E%3C/svg%3E'
+    : 'data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22%3E%3Cdefs%3E%3ClinearGradient id=%22g%22 x1=%220%25%22 y1=%220%25%22 x2=%22100%25%22 y2=%22100%25%22%3E%3Cstop offset=%220%25%22 stop-color=%22%23dbe8ff%22/%3E%3Cstop offset=%22100%25%22 stop-color=%22%23bfeef0%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width=%22120%22 height=%22120%22 rx=%2236%22 fill=%22url(%23g)%22/%3E%3Ccircle cx=%2260%22 cy=%2244%22 r=%2221%22 fill=%22rgba(255,255,255,.88)%22/%3E%3Cpath d=%22M24 102c6-19 20-29 36-29s30 10 36 29%22 fill=%22rgba(255,255,255,.88)%22/%3E%3C/svg%3E'))
 
   function persist() {
-    localStorage.setItem('derma-admin-token', token.value)
-    localStorage.setItem('derma-admin-account', JSON.stringify(account.value))
+    localStorage.setItem(TOKEN_KEY, token.value)
+    localStorage.setItem(ACCOUNT_KEY, JSON.stringify(account.value))
   }
 
   async function login(username: string, password: string) {
-    const response = await client.post('/auth/login', { username, password })
-    token.value = response.data.access_token
-    account.value = response.data.account
+    const data = await loginControlCenter(username, password)
+    token.value = data.access_token
+    account.value = data.account
     persist()
-    return response.data
+    return data
   }
 
   async function loadProfile() {
-    if (!token.value) return null
-    const response = await client.get('/auth/me')
-    account.value = response.data.account
-    persist()
-    return response.data
+    return account.value
   }
 
   function logout() {
     token.value = ''
     account.value = null
-    localStorage.removeItem('derma-admin-token')
-    localStorage.removeItem('derma-admin-account')
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(ACCOUNT_KEY)
   }
 
-  return { token, account, role, isLoggedIn, login, loadProfile, logout }
+  return { token, account, avatar, role, isLoggedIn, login, loadProfile, logout }
 })
-

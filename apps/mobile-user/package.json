@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:h5": "vite --host 127.0.0.1 --port 5174 --strictPort",
+    "dev:h5": "node ./h5-entry-helper.cjs dev --host 127.0.0.1 --port 5174 --strictPort",
     "dev:mp-weixin": "node F:/GraduationDesign/project/DermaAgent/uni-build-helper.js dev -p mp-weixin",
-    "build:h5": "vite build",
+    "build:h5": "node ./h5-entry-helper.cjs build",
     "build:mp-weixin": "node F:/GraduationDesign/project/DermaAgent/uni-build-helper.js build -p mp-weixin"
   },
   "dependencies": {

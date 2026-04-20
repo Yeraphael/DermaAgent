@@ -1,52 +1,76 @@
 <script setup lang="ts">
-import { onMounted, reactive } from 'vue'
+import { computed } from 'vue'
 
-import { request } from '../services/api'
+import RiskBadge from '../components/RiskBadge.vue'
+import { getPortalConsultations, getPortalProfile, getPortalRiskLabel } from '../shared/portal'
 
-const form = reactive({
-  allergy_history: '',
-  past_medical_history: '',
-  medication_history: '',
-  skin_type: '',
-  skin_sensitivity: '',
-  sleep_pattern: '',
-  diet_preference: '',
-  special_notes: '',
-})
+const profile = computed(() => getPortalProfile())
+const cases = computed(() => getPortalConsultations().slice(0, 3))
 
-async function loadData() {
-  const data = await request<any>('/user/health-profile')
-  Object.assign(form, data)
+function riskTone(risk: 'LOW' | 'MEDIUM' | 'HIGH') {
+  return risk === 'HIGH' ? 'rose' : risk === 'MEDIUM' ? 'amber' : 'mint'
 }
-
-async function save() {
-  await request('/user/health-profile', {
-    method: 'PUT',
-    data: form,
-  })
-  alert('健康档案已保存')
-}
-
-onMounted(loadData)
 </script>
 
 <template>
-  <section class="screen">
-    <div class="screen-head">
-      <h1 class="screen-title">健康档案</h1>
-      <p class="screen-subtitle">完善你的过敏史、肤质、生活习惯，便于 AI 和医生更准确理解皮肤状态。</p>
-    </div>
+  <section class="page-stack">
+    <article class="surface-card">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">健康档案</p>
+          <h1 class="section-title">你的皮肤健康档案</h1>
+          <p class="section-subtitle">把症状、风险等级、医生回复和护理建议沉淀为可持续追踪的档案。</p>
+        </div>
+      </div>
+      <div class="grid-3">
+        <article class="metric-card">
+          <span>皮肤类型</span>
+          <strong>{{ profile.healthArchive.skinType }}</strong>
+        </article>
+        <article class="metric-card">
+          <span>最近 30 天</span>
+          <strong>3 次问诊</strong>
+        </article>
+        <article class="metric-card">
+          <span>护理节奏</span>
+          <strong>已建立</strong>
+        </article>
+      </div>
+    </article>
 
-    <div class="card">
-      <div class="field"><label>过敏史</label><textarea v-model="form.allergy_history" class="textarea"></textarea></div>
-      <div class="field" style="margin-top: 12px;"><label>既往病史</label><textarea v-model="form.past_medical_history" class="textarea"></textarea></div>
-      <div class="field" style="margin-top: 12px;"><label>近期用药</label><textarea v-model="form.medication_history" class="textarea"></textarea></div>
-      <div class="field" style="margin-top: 12px;"><label>肤质</label><input v-model="form.skin_type" class="input" /></div>
-      <div class="field" style="margin-top: 12px;"><label>敏感程度</label><input v-model="form.skin_sensitivity" class="input" /></div>
-      <div class="field" style="margin-top: 12px;"><label>睡眠情况</label><input v-model="form.sleep_pattern" class="input" /></div>
-      <div class="field" style="margin-top: 12px;"><label>饮食偏好</label><input v-model="form.diet_preference" class="input" /></div>
-      <div class="field" style="margin-top: 12px;"><label>备注</label><textarea v-model="form.special_notes" class="textarea"></textarea></div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 16px;" @click="save">保存健康档案</button>
+    <div class="grid-2">
+      <article class="surface-card">
+        <div class="section-head">
+          <div>
+            <p class="section-eyebrow">风险趋势</p>
+            <h2 class="card-title">最近记录</h2>
+          </div>
+        </div>
+        <div class="timeline-list">
+          <article v-for="item in profile.healthArchive.riskTrend" :key="item" class="timeline-item">
+            <strong>趋势记录</strong>
+            <p>{{ item }}</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="surface-card">
+        <div class="section-head">
+          <div>
+            <p class="section-eyebrow">最近病例</p>
+            <h2 class="card-title">档案摘要</h2>
+          </div>
+        </div>
+        <div class="timeline-list">
+          <article v-for="item in cases" :key="item.caseId" class="timeline-item">
+            <strong>{{ item.title }}</strong>
+            <p>{{ item.description }}</p>
+            <div class="action-row" style="margin-top: 12px;">
+              <RiskBadge :label="getPortalRiskLabel(item.riskLevel)" :tone="riskTone(item.riskLevel)" />
+            </div>
+          </article>
+        </div>
+      </article>
     </div>
   </section>
 </template>
