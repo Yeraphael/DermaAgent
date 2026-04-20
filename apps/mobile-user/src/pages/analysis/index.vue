@@ -1,81 +1,92 @@
 <script setup lang="ts">
-import { onLoad } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { ref } from 'vue'
 
-import { ensureLogin, request } from '../../utils/api'
+import { buildVisualStyle, getPortalConsultation, getPortalConsultations, getPortalRiskLabel, getPortalStatusLabel } from '../../shared/portal'
+import { ensurePortalLogin, openMiniPage } from '../../utils/miniPortal'
 
-const detail = ref<any>(null)
+const detail = ref(getPortalConsultations()[0])
+const caseId = ref<number | null>(null)
 
-async function loadDetail(caseId: number) {
-  if (!ensureLogin()) return
-  detail.value = await request(`/consultations/${caseId}`)
+function riskClass(risk: 'LOW' | 'MEDIUM' | 'HIGH') {
+  return risk === 'HIGH' ? 'rose' : risk === 'MEDIUM' ? 'amber' : 'mint'
 }
 
-function goHistory() {
-  uni.switchTab({ url: '/pages/history/index' })
+function loadDetail() {
+  detail.value = (caseId.value ? getPortalConsultation(caseId.value) : null) || getPortalConsultations()[0]
 }
 
 onLoad((options) => {
-  if (options?.caseId) {
-    loadDetail(Number(options.caseId))
-  }
+  caseId.value = options?.caseId ? Number(options.caseId) : null
+  loadDetail()
+})
+
+onShow(() => {
+  if (!ensurePortalLogin()) return
+  loadDetail()
 })
 </script>
 
 <template>
-  <view class="page-wrap safe-top">
-    <view class="glass-card" style="padding: 32rpx;">
-      <view class="section-title">AI 分析结果</view>
-      <view class="section-subtitle">{{ detail?.case_no }} · {{ detail?.summary_title }}</view>
-
-      <view style="margin-top: 24rpx; display: flex; justify-content: space-between; gap: 14rpx;">
-        <view class="chip">{{ detail?.status }}</view>
-        <view class="chip">风险 {{ detail?.risk_level || '-' }}</view>
+  <view v-if="detail" class="page-wrap safe-top">
+    <view class="mini-card" style="padding: 32rpx;">
+      <view class="mini-eyebrow">AI 分析结果</view>
+      <view class="mini-title" style="margin-top: 12rpx;">{{ detail.title }}</view>
+      <view class="mini-subtitle">{{ detail.caseNo }} · {{ detail.submittedAt }}</view>
+      <view class="mini-actions" style="margin-top: 18rpx;">
+        <view class="mini-badge" :class="riskClass(detail.riskLevel)">{{ getPortalRiskLabel(detail.riskLevel) }}</view>
+        <view class="mini-badge slate">{{ getPortalStatusLabel(detail.status) }}</view>
       </view>
+    </view>
 
-      <view class="stat-grid" style="margin-top: 24rpx;">
-        <view class="stat-item">
-          <view class="label">瘙痒</view>
-          <view class="num">{{ detail?.itch_level || 0 }}</view>
-        </view>
-        <view class="stat-item">
-          <view class="label">疼痛</view>
-          <view class="num">{{ detail?.pain_level || 0 }}</view>
-        </view>
+    <view class="mini-space" />
+
+    <view class="mini-card" style="padding: 30rpx;">
+      <view class="mini-card-title">图片初步观察</view>
+      <view class="mini-subtitle">{{ detail.ai.observation }}</view>
+      <view class="mini-visuals" style="margin-top: 20rpx;">
+        <view v-for="item in detail.visuals.slice(0, 3)" :key="item" class="mini-visual" :style="buildVisualStyle(item)" />
       </view>
+    </view>
 
-      <view style="margin-top: 24rpx; display: grid; gap: 16rpx;">
-        <view class="glass-card" style="padding: 26rpx;">
-          <view class="label">图像观察</view>
-          <view style="margin-top: 12rpx; font-size: 28rpx; line-height: 1.8;">{{ detail?.ai_result?.image_observation }}</view>
-        </view>
-        <view class="glass-card" style="padding: 26rpx;">
-          <view class="label">可能方向</view>
-          <view style="margin-top: 12rpx; font-size: 28rpx; line-height: 1.8;">{{ detail?.ai_result?.possible_conditions }}</view>
-        </view>
-        <view class="glass-card" style="padding: 26rpx;">
-          <view class="label">护理建议</view>
-          <view style="margin-top: 12rpx; font-size: 28rpx; line-height: 1.8;">{{ detail?.ai_result?.care_advice }}</view>
-        </view>
-        <view class="glass-card" style="padding: 26rpx;">
-          <view class="label">就医提醒</view>
-          <view style="margin-top: 12rpx; font-size: 28rpx; line-height: 1.8; color: #ffb0b0;">{{ detail?.ai_result?.high_risk_alert }}</view>
-          <view class="section-subtitle">{{ detail?.ai_result?.disclaimer }}</view>
+    <view class="mini-space" />
+
+    <view class="mini-card" style="padding: 30rpx;">
+      <view class="mini-card-title">可能相关方向</view>
+      <view class="mini-progress" style="margin-top: 18rpx;">
+        <view v-for="item in detail.ai.directions" :key="item.label" class="mini-progress-row">
+          <text>{{ item.label }}</text>
+          <view class="mini-progress-track"><view :style="{ width: `${item.value}%` }" /></view>
+          <text>{{ item.value }}%</text>
         </view>
       </view>
+    </view>
 
-      <view v-if="detail?.doctor_reply" style="margin-top: 24rpx;" class="glass-card">
-        <view style="padding: 28rpx;">
-          <view class="label">医生回复</view>
-          <view style="margin-top: 10rpx; font-size: 30rpx; font-weight: 700;">{{ detail.doctor_reply.doctor_name }}</view>
-          <view style="margin-top: 14rpx; line-height: 1.8;">{{ detail.doctor_reply.content }}</view>
-        </view>
-      </view>
+    <view class="mini-space" />
 
-      <view style="display: flex; gap: 16rpx; margin-top: 28rpx;">
-        <view class="outline-btn" style="flex: 1;" @click="goHistory">查看历史记录</view>
-        <view class="primary-btn" style="flex: 1;" @click="uni.switchTab({ url: '/pages/qa/index' })">继续知识问答</view>
+    <view class="mini-card" style="padding: 30rpx;">
+      <view class="mini-card-title">护理建议</view>
+      <view v-for="item in detail.ai.careAdvice" :key="item" class="mini-item" style="margin-top: 18rpx;">
+        <view class="mini-item-title">护理建议</view>
+        <view class="mini-item-copy">{{ item }}</view>
       </view>
+      <view class="mini-item" style="margin-top: 18rpx;">
+        <view class="mini-item-title">是否建议就医</view>
+        <view class="mini-item-copy">{{ detail.ai.riskReason }}</view>
+      </view>
+    </view>
+
+    <view class="mini-space" />
+
+    <view class="mini-card" style="padding: 30rpx;">
+      <view class="mini-card-title">医生回复与知识问答</view>
+      <view v-if="detail.doctorReply" class="mini-item" style="margin-top: 18rpx;">
+        <view class="mini-item-title">{{ detail.doctorReply.doctorName }}</view>
+        <view class="mini-item-copy">{{ detail.doctorReply.content }}</view>
+        <view class="mini-item-meta">{{ detail.doctorReply.repliedAt }}</view>
+      </view>
+      <view class="mini-secondary" style="margin-top: 20rpx;" @click="openMiniPage('/pages/qa/index')">进入知识问答</view>
+      <view class="mini-subtitle" style="margin-top: 18rpx;">{{ detail.ai.disclaimer }}</view>
     </view>
   </view>
 </template>

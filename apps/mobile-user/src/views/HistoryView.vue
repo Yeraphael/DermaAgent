@@ -1,40 +1,74 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import { request } from '../services/api'
+import RiskBadge from '../components/RiskBadge.vue'
+import { getPortalConsultations, getPortalNotifications, getPortalRiskLabel, getPortalStatusLabel } from '../shared/portal'
 
 const router = useRouter()
-const items = ref<any[]>([])
+const filter = ref<'ALL' | 'AI' | 'DOCTOR' | 'SYSTEM'>('ALL')
 
-async function loadData() {
-  const data = await request<any>('/consultations/my?page=1&page_size=30')
-  items.value = data.list
+const timeline = computed(() => {
+  const consultations = getPortalConsultations().map((item) => ({
+    id: item.caseId,
+    kind: item.status === 'DOCTOR_REPLIED' ? 'DOCTOR' : 'AI',
+    title: item.title,
+    summary: item.ai.observation,
+    meta: `${item.caseNo} · ${getPortalStatusLabel(item.status)} · ${getPortalRiskLabel(item.riskLevel)}`,
+    caseId: item.caseId,
+  }))
+
+  const notifications = getPortalNotifications().map((item) => ({
+    id: item.id,
+    kind: item.category,
+    title: item.title,
+    summary: item.summary,
+    meta: item.time,
+    caseId: item.linkedCaseId,
+  }))
+
+  return [...consultations, ...notifications].filter((item) => filter.value === 'ALL' || item.kind === filter.value)
+})
+
+function tone(kind: string) {
+  if (kind === 'DOCTOR') return 'mint'
+  if (kind === 'SYSTEM') return 'violet'
+  return 'blue'
 }
-
-onMounted(loadData)
 </script>
 
 <template>
-  <section class="screen">
-    <div class="screen-head">
-      <h1 class="screen-title">问诊记录</h1>
-      <p class="screen-subtitle">查看历史问诊、AI 分析状态和医生是否已回复。</p>
-    </div>
-
-    <div class="card">
-      <div class="list">
-        <article v-for="item in items" :key="item.case_id" class="list-item" @click="router.push(`/analysis/${item.case_id}`)">
-          <div class="list-title">{{ item.summary_title }}</div>
-          <div class="chip-row" style="margin-top: 10px;">
-            <span class="chip">{{ item.status }}</span>
-            <span class="chip" :class="{ 'chip-danger': item.risk_level === 'HIGH' }">风险 {{ item.risk_level || '-' }}</span>
-            <span class="chip">{{ item.doctor_reply ? '医生已回复' : '等待医生协同' }}</span>
-          </div>
-          <div class="list-meta">{{ item.case_no }} · {{ item.submitted_at }}</div>
-        </article>
+  <section class="page-stack">
+    <article class="surface-card">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">历史记录与通知</p>
+          <h1 class="section-title">所有关键节点都收口在一个时间线里</h1>
+          <p class="section-subtitle">AI 分析完成、医生回复、系统通知与历史病例统一用同一套卡片层级展示。</p>
+        </div>
       </div>
+      <div class="segment">
+        <button type="button" :class="{ 'is-active': filter === 'ALL' }" @click="filter = 'ALL'">全部</button>
+        <button type="button" :class="{ 'is-active': filter === 'AI' }" @click="filter = 'AI'">AI 分析</button>
+        <button type="button" :class="{ 'is-active': filter === 'DOCTOR' }" @click="filter = 'DOCTOR'">医生回复</button>
+        <button type="button" :class="{ 'is-active': filter === 'SYSTEM' }" @click="filter = 'SYSTEM'">系统通知</button>
+      </div>
+    </article>
+
+    <div class="timeline-list">
+      <article
+        v-for="item in timeline"
+        :key="`${item.kind}-${item.id}`"
+        class="timeline-item"
+        @click="item.caseId ? router.push(`/analysis/${item.caseId}`) : undefined"
+      >
+        <strong>{{ item.title }}</strong>
+        <p>{{ item.summary }}</p>
+        <div class="action-row" style="margin-top: 12px;">
+          <RiskBadge :label="item.kind" :tone="tone(item.kind)" />
+        </div>
+        <span>{{ item.meta }}</span>
+      </article>
     </div>
   </section>
 </template>
-

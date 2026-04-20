@@ -1,71 +1,76 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 
-import { request } from '../services/api'
+import RiskBadge from '../components/RiskBadge.vue'
+import { askPortalQuestion, getPortalQaSnapshot } from '../shared/portal'
 
 const form = reactive({
-  question: '痘痘反复长是不是和熬夜有关？',
+  question: '湿疹和过敏有什么区别？',
 })
-const answer = ref<any>(null)
-const history = ref<any[]>([])
+const answer = ref<Awaited<ReturnType<typeof askPortalQuestion>> | null>(null)
+const snapshot = computed(() => getPortalQaSnapshot())
 
-async function loadHistory() {
-  const data = await request<any>('/rag/qa/history?page=1&page_size=8')
-  history.value = data.list
+async function askQuestion() {
+  if (!form.question.trim()) return
+  answer.value = await askPortalQuestion(form.question)
 }
-
-async function ask() {
-  answer.value = await request('/rag/qa', {
-    method: 'POST',
-    data: { question: form.question },
-  })
-  await loadHistory()
-}
-
-onMounted(loadHistory)
 </script>
 
 <template>
-  <section class="screen">
-    <div class="screen-head">
-      <h1 class="screen-title">皮肤健康问答</h1>
-      <p class="screen-subtitle">基于知识库 mock 检索结果给出护理建议和风险提示。</p>
-    </div>
+  <section class="history-grid">
+    <article class="surface-card">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">知识问答</p>
+          <h1 class="section-title">围绕护理知识做更安心的解释</h1>
+          <p class="section-subtitle">问诊之外，用户端还需要一个可信、克制、有产品感的护理问答入口。</p>
+        </div>
+      </div>
 
-    <div class="card">
       <div class="field">
-        <label>输入问题</label>
-        <textarea v-model="form.question" class="textarea"></textarea>
+        <label>输入你的问题</label>
+        <textarea v-model="form.question" class="ghost-textarea" maxlength="180" placeholder="例如：面部泛红时还能刷酸吗？" />
       </div>
-      <div class="chip-row" style="margin-top: 12px;">
-        <span class="chip" @click="form.question='痘痘反复长是不是和熬夜有关？'">痘痘与熬夜</span>
-        <span class="chip" @click="form.question='脸上过敏泛红时可以继续刷酸吗？'">过敏与刷酸</span>
-        <span class="chip" @click="form.question='湿疹反复瘙痒应该怎样护理？'">湿疹护理</span>
+      <div class="pill-row" style="margin-top: 14px;">
+        <button
+          v-for="item in snapshot.suggestions"
+          :key="item"
+          type="button"
+          class="ghost-button"
+          @click="form.question = item"
+        >
+          {{ item }}
+        </button>
       </div>
-      <button class="btn btn-primary" style="width: 100%; margin-top: 14px;" @click="ask">获取回答</button>
-    </div>
+      <button type="button" class="primary-button" style="margin-top: 18px;" @click="askQuestion">获取 AI 回答</button>
 
-    <div v-if="answer" class="card">
-      <div class="list-title">AI 回答</div>
-      <p style="line-height: 1.85;">{{ answer.answer }}</p>
-      <p class="notice">{{ answer.risk_hint }}</p>
-      <div class="list" style="margin-top: 12px;">
-        <article v-for="item in answer.references" :key="item.chunk_id" class="list-item">
-          <div class="list-title">{{ item.document_title }}</div>
-          <div class="list-meta">{{ item.snippet }}</div>
+      <div v-if="answer" class="surface-card surface-card--compact" style="margin-top: 20px;">
+        <div class="section-head">
+          <div>
+            <p class="section-eyebrow">AI 回答</p>
+            <h2 class="card-title">知识解释</h2>
+          </div>
+          <RiskBadge label="仅供参考" tone="blue" />
+        </div>
+        <p class="card-copy">{{ answer.answer }}</p>
+        <p class="card-copy" style="margin-top: 14px;">参考来源：{{ answer.reference }}</p>
+      </div>
+    </article>
+
+    <article class="surface-card">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">最近问答</p>
+          <h2 class="card-title">历史记录</h2>
+        </div>
+      </div>
+      <div class="timeline-list">
+        <article v-for="item in snapshot.history" :key="item.id" class="timeline-item">
+          <strong>{{ item.question }}</strong>
+          <p>{{ item.answer }}</p>
+          <span>{{ item.createdAt }} · {{ item.reference }}</span>
         </article>
       </div>
-    </div>
-
-    <div class="card">
-      <div class="list-title">最近问答</div>
-      <div class="list" style="margin-top: 12px;">
-        <article v-for="item in history" :key="item.qa_id" class="list-item">
-          <div class="list-title">{{ item.question }}</div>
-          <div class="list-meta">{{ item.answer }}</div>
-        </article>
-      </div>
-    </div>
+    </article>
   </section>
 </template>
-

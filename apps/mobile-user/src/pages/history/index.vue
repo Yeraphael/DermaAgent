@@ -1,44 +1,61 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
-import { ref } from 'vue'
 
-import { ensureLogin, request } from '../../utils/api'
+import { getPortalConsultations, getPortalNotifications, getPortalRiskLabel, getPortalStatusLabel } from '../../shared/portal'
+import { ensurePortalLogin, openMiniPage } from '../../utils/miniPortal'
 
-const list = ref<any[]>([])
+const filter = ref<'ALL' | 'AI' | 'DOCTOR' | 'SYSTEM'>('ALL')
 
-async function loadHistory() {
-  if (!ensureLogin()) return
-  const data = await request<any>('/consultations/my?page=1&page_size=30')
-  list.value = data.list
-}
+const timeline = computed(() => {
+  const consultations = getPortalConsultations().map((item) => ({
+    id: item.caseId,
+    type: item.status === 'DOCTOR_REPLIED' ? 'DOCTOR' : 'AI',
+    title: item.title,
+    summary: `${getPortalStatusLabel(item.status)} · ${getPortalRiskLabel(item.riskLevel)}`,
+    copy: item.ai.observation,
+    caseId: item.caseId,
+  }))
 
-function openCase(caseId: number) {
-  uni.navigateTo({ url: `/pages/analysis/index?caseId=${caseId}` })
-}
+  const notifications = getPortalNotifications().map((item) => ({
+    id: item.id,
+    type: item.category,
+    title: item.title,
+    summary: item.time,
+    copy: item.summary,
+    caseId: item.linkedCaseId,
+  }))
 
-onShow(loadHistory)
+  return [...consultations, ...notifications].filter((item) => filter.value === 'ALL' || item.type === filter.value)
+})
+
+onShow(() => {
+  ensurePortalLogin()
+})
 </script>
 
 <template>
   <view class="page-wrap safe-top">
-    <view class="glass-card" style="padding: 30rpx;">
-      <view class="section-title">问诊历史</view>
-      <view class="section-subtitle">这里汇总你所有图文问诊记录、AI 分析状态和医生回复情况。</view>
-
-      <view v-for="item in list" :key="item.case_id" style="margin-top: 20rpx; padding: 26rpx; border-radius: 30rpx; background: rgba(9, 19, 31, 0.72);" @click="openCase(item.case_id)">
-        <view style="display: flex; justify-content: space-between; gap: 12rpx;">
-          <view>
-            <view style="font-size: 30rpx; font-weight: 700;">{{ item.summary_title }}</view>
-            <view class="section-subtitle">{{ item.case_no }} · {{ item.submitted_at }}</view>
-          </view>
-          <view class="chip">{{ item.status }}</view>
-        </view>
-        <view style="margin-top: 16rpx; display: flex; gap: 16rpx;">
-          <view class="chip">风险 {{ item.risk_level || '-' }}</view>
-          <view class="chip">{{ item.doctor_reply ? '医生已回复' : '等待医生协同' }}</view>
-        </view>
+    <view class="mini-card" style="padding: 32rpx;">
+      <view class="mini-eyebrow">历史记录与通知</view>
+      <view class="mini-title" style="margin-top: 12rpx;">所有关键节点都在这里</view>
+      <view class="mini-subtitle">AI 分析、医生回复和系统通知统一以轻量时间线卡片呈现。</view>
+      <view class="mini-segment" style="margin-top: 24rpx;">
+        <view class="mini-segment-item" :class="{ active: filter === 'ALL' }" @click="filter = 'ALL'">全部</view>
+        <view class="mini-segment-item" :class="{ active: filter === 'AI' }" @click="filter = 'AI'">AI</view>
+        <view class="mini-segment-item" :class="{ active: filter === 'DOCTOR' }" @click="filter = 'DOCTOR'">医生</view>
+        <view class="mini-segment-item" :class="{ active: filter === 'SYSTEM' }" @click="filter = 'SYSTEM'">系统</view>
       </view>
     </view>
+
+    <view class="mini-space" />
+
+    <view v-for="item in timeline" :key="`${item.type}-${item.id}`" class="mini-card compact" style="padding: 26rpx;" @click="item.caseId ? openMiniPage(`/pages/analysis/index?caseId=${item.caseId}`) : undefined">
+      <view class="mini-item-title">{{ item.title }}</view>
+      <view class="mini-item-copy">{{ item.copy }}</view>
+      <view class="mini-item-meta">{{ item.type }} · {{ item.summary }}</view>
+    </view>
+
+    <MiniDock active="history" />
   </view>
 </template>
-

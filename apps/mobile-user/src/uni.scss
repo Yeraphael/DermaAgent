@@ -1,116 +1,354 @@
-$bg-deep: #071522;
-$bg-soft: #10243b;
-$card-bg: rgba(15, 31, 48, 0.82);
-$card-border: rgba(184, 220, 255, 0.14);
-$accent: #59e4c2;
-$accent-blue: #82b9ff;
-$text-main: #f3f8ff;
-$text-sub: #90a9c6;
+$page-bg: #f5f8ff;
+$surface: rgba(255, 255, 255, 0.9);
+$surface-soft: rgba(248, 250, 255, 0.96);
+$border: rgba(150, 176, 221, 0.22);
+$text-main: #143061;
+$text-strong: #183b82;
+$text-sub: #6f7ea8;
+$text-faint: #97a8c8;
+$blue: #3a8bff;
+$cyan: #00d5c4;
+$violet: #8a5cff;
+$mint: #1fc5b3;
+$rose: #ff7f8d;
+$amber: #ffad58;
 
 page {
-  background:
-    radial-gradient(circle at top left, rgba(43, 177, 160, 0.22), transparent 30%),
-    radial-gradient(circle at top right, rgba(77, 125, 255, 0.2), transparent 24%),
-    linear-gradient(180deg, #071522 0%, #0b1d30 54%, #07111b 100%);
-  color: $text-main;
   min-height: 100%;
-  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: $text-main;
+  background:
+    radial-gradient(circle at top left, rgba(179, 226, 255, 0.52), transparent 32%),
+    radial-gradient(circle at top right, rgba(214, 205, 255, 0.46), transparent 26%),
+    linear-gradient(180deg, #f9fbff 0%, #f5f8ff 60%, #eef4ff 100%);
+  font-family: "HarmonyOS Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .page-wrap {
   min-height: 100vh;
-  padding: 24rpx 28rpx 180rpx;
+  padding: 28rpx 28rpx calc(180rpx + env(safe-area-inset-bottom));
 }
 
 .safe-top {
-  padding-top: calc(var(--status-bar-height) + 18rpx);
+  padding-top: calc(var(--status-bar-height) + 16rpx);
 }
 
-.glass-card {
-  border: 1px solid $card-border;
+.mini-card {
+  position: relative;
+  overflow: hidden;
   border-radius: 34rpx;
-  background: linear-gradient(180deg, rgba(18, 35, 54, 0.86), rgba(8, 19, 31, 0.74));
-  box-shadow: 0 22rpx 70rpx rgba(2, 8, 16, 0.36);
-  backdrop-filter: blur(28rpx);
+  border: 1px solid $border;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 255, 0.9) 100%);
+  box-shadow: 0 24rpx 64rpx rgba(126, 154, 212, 0.16);
 }
 
-.section-title {
-  font-size: 40rpx;
+.mini-card.compact {
+  padding: 26rpx;
+}
+
+.mini-title {
+  color: $text-strong;
+  font-size: 44rpx;
+  font-weight: 700;
+  line-height: 1.18;
+}
+
+.mini-card-title {
+  color: $text-strong;
+  font-size: 34rpx;
   font-weight: 700;
 }
 
-.section-subtitle {
+.mini-subtitle {
   margin-top: 12rpx;
   color: $text-sub;
-  font-size: 24rpx;
-  line-height: 1.7;
+  font-size: 25rpx;
+  line-height: 1.8;
 }
 
-.primary-btn {
+.mini-eyebrow {
+  color: $text-faint;
+  font-size: 22rpx;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.mini-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  padding: 12rpx 18rpx;
+  border-radius: 999rpx;
+  background: rgba(58, 139, 255, 0.1);
+  color: $blue;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.mini-badge.mint {
+  background: rgba(31, 197, 179, 0.12);
+  color: $mint;
+}
+
+.mini-badge.amber {
+  background: rgba(255, 173, 88, 0.14);
+  color: #d4892d;
+}
+
+.mini-badge.rose {
+  background: rgba(255, 127, 141, 0.14);
+  color: #e45e72;
+}
+
+.mini-badge.violet {
+  background: rgba(138, 92, 255, 0.1);
+  color: $violet;
+}
+
+.mini-badge.slate {
+  background: rgba(111, 126, 168, 0.12);
+  color: $text-sub;
+}
+
+.mini-primary,
+.mini-secondary {
   height: 96rpx;
   line-height: 96rpx;
+  text-align: center;
   border-radius: 30rpx;
-  text-align: center;
+  font-size: 28rpx;
   font-weight: 700;
-  color: #04212a;
-  background: linear-gradient(135deg, #2cbca6, #68e0cc);
 }
 
-.outline-btn {
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 28rpx;
-  text-align: center;
-  color: $text-main;
-  border: 1px solid $card-border;
-  background: rgba(9, 19, 31, 0.66);
+.mini-primary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #8a5cff 0%, #3a8bff 45%, #00d5c4 100%);
+  box-shadow: 0 18rpx 34rpx rgba(106, 121, 255, 0.24);
 }
 
-.label {
+.mini-secondary {
+  border: 1px solid $border;
+  color: $text-strong;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mini-field {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.mini-field-label {
   color: $text-sub;
   font-size: 24rpx;
 }
 
-.input-box,
-.textarea-box,
-.picker-box {
+.mini-input,
+.mini-textarea,
+.mini-picker {
   width: 100%;
-  border-radius: 26rpx;
+  border-radius: 28rpx;
   padding: 26rpx;
-  border: 1px solid rgba(184, 220, 255, 0.12);
-  background: rgba(8, 18, 30, 0.68);
+  border: 1px solid $border;
+  background: $surface-soft;
   color: $text-main;
   font-size: 28rpx;
 }
 
-.chip-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16rpx;
+.mini-textarea {
+  min-height: 180rpx;
 }
 
-.chip {
-  padding: 14rpx 22rpx;
-  border-radius: 999rpx;
-  background: rgba(89, 228, 194, 0.12);
-  color: #d6fff5;
-  font-size: 24rpx;
-}
-
-.stat-grid {
+.mini-grid-2,
+.mini-grid-3,
+.mini-visuals,
+.mini-stat-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 18rpx;
 }
 
-.stat-item {
-  padding: 24rpx;
-  border-radius: 28rpx;
-  background: rgba(9, 19, 31, 0.72);
+.mini-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.stat-item .num {
+.mini-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mini-visuals {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mini-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mini-metric {
+  padding: 24rpx;
+  border-radius: 28rpx;
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.mini-metric text:first-child {
+  color: $text-sub;
+  font-size: 24rpx;
+}
+
+.mini-metric text:last-child {
+  display: block;
   margin-top: 10rpx;
-  font-size: 46rpx;
+  color: $text-strong;
+  font-size: 44rpx;
   font-weight: 700;
+}
+
+.mini-item {
+  padding: 24rpx;
+  border-radius: 28rpx;
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.84);
+}
+
+.mini-item-title {
+  color: $text-strong;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.mini-item-copy {
+  margin-top: 12rpx;
+  color: $text-sub;
+  font-size: 25rpx;
+  line-height: 1.8;
+}
+
+.mini-item-meta {
+  margin-top: 12rpx;
+  color: $text-faint;
+  font-size: 22rpx;
+}
+
+.mini-actions,
+.mini-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+}
+
+.mini-chip {
+  padding: 12rpx 18rpx;
+  border-radius: 999rpx;
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.9);
+  color: $text-sub;
+  font-size: 24rpx;
+}
+
+.mini-chip.active {
+  color: $text-strong;
+  border-color: rgba(58, 139, 255, 0.3);
+  background: rgba(58, 139, 255, 0.08);
+}
+
+.mini-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 8rpx;
+  border-radius: 999rpx;
+  border: 1px solid $border;
+  background: rgba(244, 247, 255, 0.94);
+}
+
+.mini-segment-item {
+  padding: 12rpx 20rpx;
+  border-radius: 999rpx;
+  color: $text-sub;
+  font-size: 24rpx;
+  font-weight: 700;
+}
+
+.mini-segment-item.active {
+  background: #ffffff;
+  color: $text-strong;
+  box-shadow: 0 10rpx 26rpx rgba(126, 154, 212, 0.12);
+}
+
+.mini-visual {
+  height: 180rpx;
+  border-radius: 26rpx;
+  border: 1px dashed rgba(130, 156, 208, 0.34);
+  background: rgba(244, 247, 255, 0.84);
+}
+
+.mini-plus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-faint;
+  font-size: 46rpx;
+}
+
+.mini-progress {
+  display: grid;
+  gap: 14rpx;
+}
+
+.mini-progress-row {
+  display: grid;
+  grid-template-columns: 160rpx 1fr 80rpx;
+  align-items: center;
+  gap: 14rpx;
+  color: $text-sub;
+  font-size: 24rpx;
+}
+
+.mini-progress-track {
+  position: relative;
+  height: 10rpx;
+  border-radius: 999rpx;
+  background: rgba(223, 230, 247, 0.92);
+  overflow: hidden;
+}
+
+.mini-progress-track view {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #8a5cff 0%, #3a8bff 55%, #00d5c4 100%);
+}
+
+.mini-dock {
+  position: fixed;
+  left: 28rpx;
+  right: 28rpx;
+  bottom: calc(24rpx + env(safe-area-inset-bottom));
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10rpx;
+  padding: 12rpx;
+  border-radius: 34rpx;
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18rpx 42rpx rgba(126, 154, 212, 0.18);
+}
+
+.mini-dock__item {
+  padding: 14rpx 8rpx;
+  text-align: center;
+  border-radius: 24rpx;
+  color: $text-sub;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.mini-dock__item.is-active {
+  color: $text-strong;
+  background: rgba(58, 139, 255, 0.1);
+}
+
+.mini-space {
+  height: 20rpx;
 }

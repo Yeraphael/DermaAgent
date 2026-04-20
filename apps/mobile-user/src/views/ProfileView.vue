@@ -1,65 +1,73 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed } from 'vue'
 
-import { request } from '../services/api'
-import { clearSession } from '../services/session'
+import RiskBadge from '../components/RiskBadge.vue'
+import { getPortalProfile } from '../shared/portal'
 
-const router = useRouter()
-const profile = ref<any>(null)
-const notifications = ref<any[]>([])
-
-async function loadData() {
-  profile.value = await request('/user/profile')
-  const notice = await request<any>('/user/notifications?page=1&page_size=5')
-  notifications.value = notice.list
-}
-
-function logout() {
-  clearSession()
-  router.replace('/login')
-}
-
-onMounted(loadData)
+const data = computed(() => getPortalProfile())
 </script>
 
 <template>
-  <section class="screen">
-    <div class="screen-head">
-      <h1 class="screen-title">{{ profile?.profile?.real_name || '皮肤健康用户' }}</h1>
-      <p class="screen-subtitle">{{ profile?.account?.username }} · {{ profile?.profile?.city || '未填写城市' }}</p>
-    </div>
-
-    <div class="card">
-      <div class="grid-2">
-        <div class="stat-box">
-          <div class="stat-label">肤质</div>
-          <div class="stat-value" style="font-size: 22px;">{{ profile?.health_profile?.skin_type || '未填' }}</div>
+  <section class="page-stack">
+    <article class="surface-card">
+      <div class="section-head">
+        <div>
+          <p class="section-eyebrow">个人中心</p>
+          <h1 class="section-title">{{ data.profile.real_name }}</h1>
+          <p class="section-subtitle">{{ data.profile.city }} · {{ data.profile.age }} 岁 · {{ data.profile.skin_type }}</p>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">敏感程度</div>
-          <div class="stat-value" style="font-size: 22px;">{{ profile?.health_profile?.skin_sensitivity || '未填' }}</div>
-        </div>
+        <RiskBadge :label="data.profile.level" tone="violet" />
       </div>
-    </div>
-
-    <div class="card">
-      <div class="grid-2">
-        <button class="btn btn-secondary" @click="router.push('/health')">健康档案</button>
-        <button class="btn btn-secondary" @click="router.push('/history')">全部记录</button>
-      </div>
-      <button class="btn btn-danger" style="width: 100%; margin-top: 14px;" @click="logout">退出登录</button>
-    </div>
-
-    <div class="card">
-      <div class="list-title">近期通知</div>
-      <div class="list" style="margin-top: 12px;">
-        <article v-for="item in notifications" :key="item.notification_id" class="list-item">
-          <div class="list-title">{{ item.title }}</div>
-          <div class="list-meta">{{ item.content }}</div>
+      <div class="grid-3">
+        <article class="metric-card">
+          <span>皮肤类型</span>
+          <strong>{{ data.healthArchive.skinType }}</strong>
+        </article>
+        <article class="metric-card">
+          <span>最近医生</span>
+          <strong>{{ data.healthArchive.latestDoctor }}</strong>
+        </article>
+        <article class="metric-card">
+          <span>风险趋势</span>
+          <strong>稳定</strong>
         </article>
       </div>
+    </article>
+
+    <div class="grid-2">
+      <article class="surface-card">
+        <div class="section-head">
+          <div>
+            <p class="section-eyebrow">护理计划</p>
+            <h2 class="card-title">长期陪伴感</h2>
+          </div>
+        </div>
+        <div class="timeline-list">
+          <article v-for="item in data.carePlan" :key="item" class="timeline-item">
+            <strong>建议</strong>
+            <p>{{ item }}</p>
+          </article>
+        </div>
+      </article>
+
+      <article class="surface-card">
+        <div class="section-head">
+          <div>
+            <p class="section-eyebrow">偏好与档案</p>
+            <h2 class="card-title">关键健康信息</h2>
+          </div>
+        </div>
+        <div class="timeline-list">
+          <article class="timeline-item">
+            <strong>过敏史</strong>
+            <p>{{ data.healthArchive.allergies.join('、') }}</p>
+          </article>
+          <article class="timeline-item">
+            <strong>生活习惯</strong>
+            <p>{{ data.healthArchive.habits.join('、') }}</p>
+          </article>
+        </div>
+      </article>
     </div>
   </section>
 </template>
-
