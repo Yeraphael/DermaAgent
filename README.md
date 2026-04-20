@@ -1,62 +1,157 @@
-# 肤联智诊
+# 肤联智诊 DermaAgent
 
-基于 AI 的皮肤病智慧诊断小助手，包含完整可运行的前端、后端、SQL 初始化脚本与本地部署说明。
+面向答辩展示与产品化演示的 AI 皮肤健康辅助系统，包含：
 
-## 工程组成
+- 用户端 Web/H5
+- 用户端小程序风格页面
+- 医生端工作台
+- 管理员端中台
+- FastAPI 后端与 MySQL 数据层
 
-- `apps/mobile-user`：uni-app + Vue 3 + TypeScript 用户端
-- `apps/web-admin`：Vue 3 + Vite + TypeScript + Pinia + Vue Router + Axios + Element Plus 医生 / 管理员端
-- `backend`：FastAPI + SQLAlchemy + JWT + RBAC 后端
-- `sql`：MySQL 建库、建表、初始化与统计脚本
-- `deploy/nginx`：本地 Nginx 反向代理示例
-- `docs`：UI Design Token 与说明文档
+## 项目结构
 
-## 版本选型
+- `apps/mobile-user`
+  用户端前端，基于 `uni-app + Vue 3 + TypeScript`，同时覆盖 H5 与微信小程序构建。
+- `apps/web-admin`
+  医生端与管理员端，基于 `Vue 3 + Vite + TypeScript + Pinia + Vue Router`。
+- `backend`
+  FastAPI 后端，包含认证、问诊、医生、管理、RAG 问答等接口。
+- `sql`
+  数据库建库建表与初始化脚本。
+- `docs`
+  设计规范与补充文档。
 
-- Python：3.13
-- FastAPI：0.115.12
-- SQLAlchemy：2.0.39
-- pydantic：2.11.3
-- pydantic-settings：2.10.1
-- Vue：3.4.28
-- Vite：5.2.8
-- Element Plus：2.8.8
-- uni-app：`@dcloudio/uni-app@3.0.0-5000720260410001`
-- uni Vite 插件：`@dcloudio/vite-plugin-uni@3.0.0-5000720260410001`
+## 当前版本亮点
 
-## 重要说明
+- 用户端重构为高保真 AI 医疗科技风，支持首页、问诊提交、AI 结果、知识问答、历史记录、健康档案。
+- 小程序风格页面与 H5 视觉语言统一，适合演示与迁移。
+- 医生端重构为工作台、三栏问诊详情、患者管理。
+- 管理员端重构为数据看板、用户管理、医生管理、知识库流程、系统配置、日志统计、公告管理。
+- 根目录保留了 5 张设计稿 PNG 作为本次还原参考。
 
-- MySQL 是主业务真实数据源
-- Qdrant 本次默认 `mock`
-- 千问模型本次默认 `mock`
-- 千问 API Key 与 Base URL 只能从环境变量读取
+## 技术栈
 
-## 环境建议
+- 前端
+  - Vue 3
+  - Vite
+  - TypeScript
+  - Pinia
+  - Vue Router
+  - Element Plus
+  - uni-app
+- 后端
+  - FastAPI
+  - SQLAlchemy
+  - MySQL
+  - JWT
 
-- 强烈建议为本项目单独创建 Conda 环境
-- 不要直接复用已经安装过 `docling`、`langchain-community`、`transformers`、`qdrant-client` 等包的旧环境
-- 如果复用旧环境，`pip` 可能会报很多“其它包缺少依赖”或“版本冲突”提示；这通常是旧环境被别的项目污染，不是本项目核心依赖本身损坏
+## 环境要求
 
-## 默认测试账号
+- Node.js 18+
+- npm 9+
+- Python 3.11+ 或兼容版本
+- MySQL 8+
 
-- 用户：`user01 / 12345678`
-- 医生：`doctor01 / 12345678`
-- 管理员：`admin01 / 12345678`
+## 安装依赖
 
-## 本地地址
+根目录执行：
 
-- 后端：`http://127.0.0.1:8000`
+```bash
+npm install
+```
+
+后端依赖请参考：
+
+- [项目启动与部署说明.md](/F:/GraduationDesign/project/DermaAgent/项目启动与部署说明.md)
+- [微信小程序问题排查与打包说明.md](/F:/GraduationDesign/project/DermaAgent/微信小程序问题排查与打包说明.md)
+
+## 前端启动
+
+用户端 H5：
+
+```bash
+npm run dev:user
+```
+
+医生端 / 管理员端：
+
+```bash
+npm run dev:web
+```
+
+微信小程序开发构建：
+
+```bash
+npm run dev:user:mp-weixin
+```
+
+## 前端构建
+
+医生端 / 管理员端：
+
+```bash
+npm run build:web
+```
+
+用户端 H5：
+
+```bash
+npm run build:user
+```
+
+微信小程序：
+
+```bash
+npm run build:user:mp-weixin
+```
+
+微信开发者工具导入目录：
+
+```text
+dist/build/mp-weixin
+```
+
+## 默认访问地址
+
 - 后端 API：`http://127.0.0.1:8000/api/v1`
-- Web 管理端：`http://127.0.0.1:5173`
-- uni-app H5 用户端：`http://127.0.0.1:5174`
+- 医生端 / 管理员端：`http://127.0.0.1:5173`
+- 用户端 H5：`http://127.0.0.1:5174`
 
-## 启动顺序
+## 演示账号
 
-1. 创建独立 Conda 环境
-2. 配置 `.env`
-3. 执行 SQL 初始化
-4. 启动 FastAPI
-5. 启动 Web 管理端
-6. 启动 uni-app 用户端
+- 用户端：`user01 / 12345678`
+- 医生端：`doctor01 / 12345678`
+- 管理端：`admin01 / 12345678`
 
-详细步骤见 [项目启动与部署说明.md](./项目启动与部署说明.md)。
+## 后端说明
+
+- 默认接口前缀：`/api/v1`
+- 当前仓库包含后端完整实现与接口文档
+- 接口基准文档：`肤联智诊_接口文档.md`
+
+启动后端前请先完成：
+
+1. 配置根目录 `.env`
+2. 初始化 MySQL 数据库
+3. 按文档启动 FastAPI 服务
+
+## 文档索引
+
+- [肤联智诊_接口文档.md](/F:/GraduationDesign/project/DermaAgent/肤联智诊_接口文档.md)
+- [肤联智诊_系统分析文档.md](/F:/GraduationDesign/project/DermaAgent/肤联智诊_系统分析文档.md)
+- [肤联智诊_系统设计文档.md](/F:/GraduationDesign/project/DermaAgent/肤联智诊_系统设计文档.md)
+- [项目启动与部署说明.md](/F:/GraduationDesign/project/DermaAgent/项目启动与部署说明.md)
+- [微信小程序问题排查与打包说明.md](/F:/GraduationDesign/project/DermaAgent/微信小程序问题排查与打包说明.md)
+
+## 已验证命令
+
+本次提交前已验证：
+
+- `npm run build:web`
+- `npm run build:user`
+- `npm run build:user:mp-weixin`
+
+已知提示：
+
+- `web-admin` 构建有 chunk size 警告，但不影响产物生成。
+- `uni-app` 构建有 Sass 旧 API / `@import` deprecation 警告，不影响当前运行。
