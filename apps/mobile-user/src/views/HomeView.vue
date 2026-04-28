@@ -28,14 +28,13 @@ function statusTone(status: string) {
           <p class="section-eyebrow">智能问诊入口</p>
           <h1 class="section-title">你好，{{ dashboard.profile.real_name }}。今天也让皮肤状态更稳定一点。</h1>
           <p class="section-subtitle">
-            这里是你的 AI 皮肤健康助手。上传 1-5 张皮肤图片、补充症状和时长后，
-            系统会给出初步观察、风险级别、护理建议，并在需要时接入医生回复。
+            这里是你的智能皮肤健康助手。上传 1-5 张皮肤图片并补充症状后，系统会返回初步观察、风险等级、护理建议，并在需要时接入医生复核。
           </p>
         </div>
 
         <div class="action-row">
           <button type="button" class="primary-button" @click="router.push('/consultation')">开始问诊</button>
-          <button type="button" class="ghost-button" @click="router.push('/analysis')">查看 AI 结果</button>
+          <button type="button" class="ghost-button" @click="router.push('/analysis')">查看智能结果</button>
         </div>
 
         <div class="hero-card__visual" />
@@ -73,7 +72,7 @@ function statusTone(status: string) {
       <article v-for="item in dashboard.quickActions" :key="item.key" class="surface-card surface-card--compact">
         <p class="section-eyebrow">{{ item.description }}</p>
         <h3 class="card-title" style="font-size: 22px; margin-top: 10px;">{{ item.label }}</h3>
-        <p class="card-copy">围绕肤联智诊的真实业务入口做成可运行页面，而不是静态示意图。</p>
+        <p class="card-copy">围绕皮肤智能问诊的关键入口都收拢到同一套中文界面中，浏览和操作会更顺手。</p>
       </article>
     </div>
 
@@ -81,7 +80,7 @@ function statusTone(status: string) {
       <article class="surface-card">
         <div class="section-head">
           <div>
-            <p class="section-eyebrow">进行中案例</p>
+            <p class="section-eyebrow">进行中的案例</p>
             <h2 class="card-title">{{ dashboard.ongoingCase.title }}</h2>
           </div>
           <RiskBadge :label="getPortalRiskLabel(dashboard.ongoingCase.riskLevel)" :tone="riskTone(dashboard.ongoingCase.riskLevel)" />

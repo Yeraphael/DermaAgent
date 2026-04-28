@@ -33,20 +33,22 @@ def _ensure_case_access(db: Session, case_id: int, user: User) -> Consultation:
     case = _load_case(db, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="问诊单不存在")
+
     if user.role_type == "ADMIN":
         return case
+
     if user.role_type == "USER" and case.user_id != user.id:
         raise HTTPException(status_code=403, detail="无权查看该问诊单")
+
     if user.role_type == "DOCTOR":
-        doctor = db.execute(select(Consultation.assigned_doctor_id).where(Consultation.id == case_id)).scalar_one()
-        doctor_row = db.execute(select(Consultation.assigned_doctor_id).where(Consultation.id == case_id)).scalar_one()
-        if case.assigned_doctor_id is None or doctor_row is None:
-            raise HTTPException(status_code=403, detail="该问诊单尚未分配给医生")
         from app.model import Doctor
 
         doctor_profile = db.scalar(select(Doctor).where(Doctor.user_id == user.id))
+        if case.assigned_doctor_id is None:
+            raise HTTPException(status_code=403, detail="该问诊单尚未分配给医生")
         if not doctor_profile or doctor_profile.id != case.assigned_doctor_id:
             raise HTTPException(status_code=403, detail="无权查看该问诊单")
+
     return case
 
 
@@ -57,6 +59,11 @@ def create_consultation(
     user: User = Depends(require_roles("USER")),
     db: Session = Depends(get_db),
 ) -> dict:
+    if not payload.image_urls:
+        raise HTTPException(status_code=400, detail="图文问诊至少需要上传 1 张图片")
+    if len(payload.image_urls) > 5:
+        raise HTTPException(status_code=400, detail="单次问诊最多上传 5 张图片")
+
     assigned = select_doctor_for_case(db)
     title = payload.chief_complaint[:24] if payload.chief_complaint else "皮肤健康咨询"
     case = Consultation(
@@ -79,6 +86,7 @@ def create_consultation(
     )
     db.add(case)
     db.flush()
+
     for index, image_url in enumerate(payload.image_urls, start=1):
         db.add(
             ConsultationImage(
@@ -90,6 +98,7 @@ def create_consultation(
                 uploaded_at=datetime.utcnow(),
             )
         )
+
     db.add(
         ConsultationMessage(
             consultation_id=case.id,
@@ -100,19 +109,22 @@ def create_consultation(
             created_at=datetime.utcnow(),
         )
     )
+
     record = rerun_ai_analysis(db, case)
     if not case.assigned_doctor_id and case.status == "WAIT_DOCTOR":
         assigned = select_doctor_for_case(db)
         case.assigned_doctor_id = assigned.id if assigned else None
+
     create_notification(
         db,
         user.id,
         "问诊已受理",
-        f"问诊单 {case.case_no} 已生成，可查看 AI 图文辅助分析结果。",
+        f"问诊单 {case.case_no} 已生成，可查看智能图文辅助分析结果。",
         "CONSULTATION",
         "CONSULTATION",
         case.id,
     )
+
     if case.assigned_doctor_id:
         from app.model import Doctor
 
@@ -127,7 +139,17 @@ def create_consultation(
                 "CONSULTATION",
                 case.id,
             )
-    log_operation(db, user.id, user.role_type, "CONSULTATION", "CREATE", str(case.id), f"创建问诊单 {case.case_no}", request.client.host if request.client else None)
+
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "CONSULTATION",
+        "CREATE",
+        str(case.id),
+        f"创建问诊单 {case.case_no}",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(
         request,
@@ -148,9 +170,14 @@ def my_consultations(
     user: User = Depends(require_roles("USER")),
     db: Session = Depends(get_db),
 ) -> dict:
-    rows = db.execute(select(Consultation).where(Consultation.user_id == user.id, Consultation.is_deleted == 0).order_by(Consultation.created_at.desc())).scalars().all()
+    rows = db.execute(
+        select(Consultation)
+        .where(Consultation.user_id == user.id, Consultation.is_deleted == 0)
+        .order_by(Consultation.created_at.desc())
+    ).scalars().all()
     if status:
         rows = [row for row in rows if row.status == status]
+
     start = (page - 1) * page_size
     items = rows[start : start + page_size]
     data = []
@@ -191,7 +218,11 @@ def consultation_messages(
     db: Session = Depends(get_db),
 ) -> dict:
     _ensure_case_access(db, case_id, user)
-    rows = db.execute(select(ConsultationMessage).where(ConsultationMessage.consultation_id == case_id).order_by(ConsultationMessage.created_at.asc())).scalars().all()
+    rows = db.execute(
+        select(ConsultationMessage)
+        .where(ConsultationMessage.consultation_id == case_id)
+        .order_by(ConsultationMessage.created_at.asc())
+    ).scalars().all()
     return response_envelope(
         request,
         [
@@ -227,6 +258,7 @@ def send_consultation_message(
     )
     db.add(message)
     case.updated_at = datetime.utcnow()
+
     target_user_id = None
     if user.role_type == "USER" and case.assigned_doctor_id:
         from app.model import Doctor
@@ -235,6 +267,7 @@ def send_consultation_message(
         target_user_id = doctor.user_id if doctor else None
     elif user.role_type == "DOCTOR":
         target_user_id = case.user_id
+
     if target_user_id:
         create_notification(
             db,
@@ -245,7 +278,17 @@ def send_consultation_message(
             "CONSULTATION",
             case.id,
         )
-    log_operation(db, user.id, user.role_type, "CONSULTATION", "MESSAGE", str(case.id), f"发送问诊消息 {payload.message_type}", request.client.host if request.client else None)
+
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "CONSULTATION",
+        "MESSAGE",
+        str(case.id),
+        f"发送问诊消息 {payload.message_type}",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(request, {"message_id": message.id}, "发送成功")
 
@@ -270,7 +313,16 @@ def close_consultation(
         "CONSULTATION",
         case.id,
     )
-    log_operation(db, user.id, user.role_type, "CONSULTATION", "CLOSE", str(case.id), f"关闭问诊单 {case.case_no}", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "CONSULTATION",
+        "CLOSE",
+        str(case.id),
+        f"关闭问诊单 {case.case_no}",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(request, {"case_id": case.id, "status": case.status}, "已关闭")
 
@@ -286,10 +338,24 @@ def analyze_consultation(
     case = _ensure_case_access(db, case_id, user)
     if case.status == "PENDING_AI" or payload.force_reanalyze:
         record = rerun_ai_analysis(db, case)
-        log_operation(db, user.id, user.role_type, "AI", "ANALYZE", str(case.id), f"执行 AI 分析 {case.case_no}", request.client.host if request.client else None)
+        log_operation(
+            db,
+            user.id,
+            user.role_type,
+            "AI",
+            "ANALYZE",
+            str(case.id),
+            f"执行 AI 分析 {case.case_no}",
+            request.client.host if request.client else None,
+        )
         db.commit()
         return response_envelope(request, build_ai_payload(record), "分析完成")
-    latest = db.scalar(select(AIAnalysisRecord).where(AIAnalysisRecord.consultation_id == case.id).order_by(AIAnalysisRecord.created_at.desc()))
+
+    latest = db.scalar(
+        select(AIAnalysisRecord)
+        .where(AIAnalysisRecord.consultation_id == case.id)
+        .order_by(AIAnalysisRecord.created_at.desc())
+    )
     return response_envelope(request, build_ai_payload(latest), "已返回最新分析结果")
 
 
@@ -301,7 +367,11 @@ def analyze_result(
     db: Session = Depends(get_db),
 ) -> dict:
     case = _ensure_case_access(db, case_id, user)
-    latest = db.scalar(select(AIAnalysisRecord).where(AIAnalysisRecord.consultation_id == case.id).order_by(AIAnalysisRecord.created_at.desc()))
+    latest = db.scalar(
+        select(AIAnalysisRecord)
+        .where(AIAnalysisRecord.consultation_id == case.id)
+        .order_by(AIAnalysisRecord.created_at.desc())
+    )
     return response_envelope(request, build_ai_payload(latest))
 
 
@@ -314,6 +384,15 @@ def retry_analyze(
 ) -> dict:
     case = _ensure_case_access(db, case_id, user)
     record = rerun_ai_analysis(db, case)
-    log_operation(db, user.id, user.role_type, "AI", "RETRY", str(case.id), f"重新分析问诊单 {case.case_no}", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "AI",
+        "RETRY",
+        str(case.id),
+        f"重新分析问诊单 {case.case_no}",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(request, build_ai_payload(record), "重新分析完成")

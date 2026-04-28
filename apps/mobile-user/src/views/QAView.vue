@@ -23,7 +23,7 @@ async function askQuestion() {
         <div>
           <p class="section-eyebrow">知识问答</p>
           <h1 class="section-title">围绕护理知识做更安心的解释</h1>
-          <p class="section-subtitle">问诊之外，用户端还需要一个可信、克制、有产品感的护理问答入口。</p>
+          <p class="section-subtitle">除了问诊结果，用户端也需要一个可读、克制、全中文的护理问答入口。</p>
         </div>
       </div>
 
@@ -42,12 +42,12 @@ async function askQuestion() {
           {{ item }}
         </button>
       </div>
-      <button type="button" class="primary-button" style="margin-top: 18px;" @click="askQuestion">获取 AI 回答</button>
+      <button type="button" class="primary-button" style="margin-top: 18px;" @click="askQuestion">获取智能回答</button>
 
       <div v-if="answer" class="surface-card surface-card--compact" style="margin-top: 20px;">
         <div class="section-head">
           <div>
-            <p class="section-eyebrow">AI 回答</p>
+            <p class="section-eyebrow">智能回答</p>
             <h2 class="card-title">知识解释</h2>
           </div>
           <RiskBadge label="仅供参考" tone="blue" />

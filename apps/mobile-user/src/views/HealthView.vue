@@ -19,7 +19,7 @@ function riskTone(risk: 'LOW' | 'MEDIUM' | 'HIGH') {
         <div>
           <p class="section-eyebrow">健康档案</p>
           <h1 class="section-title">你的皮肤健康档案</h1>
-          <p class="section-subtitle">把症状、风险等级、医生回复和护理建议沉淀为可持续追踪的档案。</p>
+          <p class="section-subtitle">把症状、风险等级、医生回复和护理建议沉淀成可持续追踪的健康档案。</p>
         </div>
       </div>
       <div class="grid-3">

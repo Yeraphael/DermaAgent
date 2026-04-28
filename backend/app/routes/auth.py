@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,9 +24,11 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
         raise HTTPException(status_code=400, detail="两次输入的密码不一致")
     if payload.role_type not in {"USER", "DOCTOR"}:
         raise HTTPException(status_code=400, detail="仅支持注册用户或医生账号")
+
     exists = db.scalar(select(User).where(User.username == payload.username, User.is_deleted == 0))
     if exists:
         raise HTTPException(status_code=400, detail="用户名已存在")
+
     user = User(
         username=payload.username,
         password_hash=hash_password(payload.password),
@@ -40,6 +42,7 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
     )
     db.add(user)
     db.flush()
+
     profile, health = ensure_user_profile(db, user.id)
     if payload.role_type == "DOCTOR":
         db.add(
@@ -58,8 +61,18 @@ def register(payload: RegisterIn, request: Request, db: Session = Depends(get_db
                 updated_at=datetime.utcnow(),
             )
         )
+
     db.commit()
-    log_operation(db, user.id, user.role_type, "AUTH", "REGISTER", str(user.id), "新账号注册", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "AUTH",
+        "REGISTER",
+        str(user.id),
+        "新账号注册",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(
         request,
@@ -79,13 +92,23 @@ def login(payload: LoginIn, request: Request, db: Session = Depends(get_db)) -> 
         raise HTTPException(status_code=400, detail="用户名或密码错误")
     if user.status != 1:
         raise HTTPException(status_code=403, detail="账号已被停用")
+
     user.last_login_at = datetime.utcnow()
     user.updated_at = datetime.utcnow()
     token = create_access_token(str(user.id), user.role_type)
     profile, health = ensure_user_profile(db, user.id)
     doctor = db.scalar(select(Doctor).where(Doctor.user_id == user.id)) if user.role_type == "DOCTOR" else None
     admin = db.scalar(select(Admin).where(Admin.user_id == user.id)) if user.role_type == "ADMIN" else None
-    log_operation(db, user.id, user.role_type, "AUTH", "LOGIN", str(user.id), "账号登录", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "AUTH",
+        "LOGIN",
+        str(user.id),
+        "账号登录",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(
         request,
@@ -164,15 +187,34 @@ def change_password(
         raise HTTPException(status_code=400, detail="两次输入的新密码不一致")
     if not verify_password(payload.old_password, user.password_hash):
         raise HTTPException(status_code=400, detail="原密码错误")
+
     user.password_hash = hash_password(payload.new_password)
     user.updated_at = datetime.utcnow()
-    log_operation(db, user.id, user.role_type, "AUTH", "CHANGE_PASSWORD", str(user.id), "修改密码", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "AUTH",
+        "CHANGE_PASSWORD",
+        str(user.id),
+        "修改密码",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(request, {"success": True}, "密码修改成功")
 
 
 @router.post("/logout")
 def logout(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    log_operation(db, user.id, user.role_type, "AUTH", "LOGOUT", str(user.id), "退出登录", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "AUTH",
+        "LOGOUT",
+        str(user.id),
+        "退出登录",
+        request.client.host if request.client else None,
+    )
     db.commit()
     return response_envelope(request, {"success": True}, "退出成功")

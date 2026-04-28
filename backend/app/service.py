@@ -109,13 +109,21 @@ def serialize_health(health: HealthProfile | None) -> dict:
 
 def select_doctor_for_case(db: Session) -> Doctor | None:
     doctors = db.execute(
-        select(Doctor).join(User, Doctor.user_id == User.id).where(Doctor.audit_status == "APPROVED", Doctor.service_status == 1, User.status == 1)
+        select(Doctor).join(User, Doctor.user_id == User.id).where(
+            Doctor.audit_status == "APPROVED",
+            Doctor.service_status == 1,
+            User.status == 1,
+        )
     ).scalars().all()
     if not doctors:
         return None
+
     pending = {
         doctor.id: db.scalar(
-            select(func.count(Consultation.id)).where(Consultation.assigned_doctor_id == doctor.id, Consultation.status == "WAIT_DOCTOR")
+            select(func.count(Consultation.id)).where(
+                Consultation.assigned_doctor_id == doctor.id,
+                Consultation.status == "WAIT_DOCTOR",
+            )
         )
         or 0
         for doctor in doctors
@@ -191,7 +199,12 @@ def build_consultation_detail(db: Session, consultation: Consultation, include_p
     user = db.scalar(select(User).where(User.id == consultation.user_id))
     profile, health = ensure_user_profile(db, consultation.user_id)
     doctor = db.scalar(select(Doctor).where(Doctor.id == consultation.assigned_doctor_id)) if consultation.assigned_doctor_id else None
-    images = db.execute(select(ConsultationImage).where(ConsultationImage.consultation_id == consultation.id).order_by(ConsultationImage.sort_no.asc())).scalars().all()
+    images = db.execute(
+        select(ConsultationImage)
+        .where(ConsultationImage.consultation_id == consultation.id)
+        .order_by(ConsultationImage.sort_no.asc())
+    ).scalars().all()
+
     payload = {
         "case_id": consultation.id,
         "case_no": consultation.case_no,
@@ -217,6 +230,7 @@ def build_consultation_detail(db: Session, consultation: Consultation, include_p
         if doctor
         else None,
     }
+
     if include_patient and user:
         payload["patient"] = {
             "user": serialize_account(user),
@@ -228,7 +242,11 @@ def build_consultation_detail(db: Session, consultation: Consultation, include_p
 
 def rerun_ai_analysis(db: Session, consultation: Consultation) -> AIAnalysisRecord:
     _, health = ensure_user_profile(db, consultation.user_id)
-    images = db.execute(select(ConsultationImage).where(ConsultationImage.consultation_id == consultation.id).order_by(ConsultationImage.sort_no.asc())).scalars().all()
+    images = db.execute(
+        select(ConsultationImage)
+        .where(ConsultationImage.consultation_id == consultation.id)
+        .order_by(ConsultationImage.sort_no.asc())
+    ).scalars().all()
     result = analyzer.analyze(consultation.chief_complaint or "", [item.file_url for item in images], health_summary(health))
     record = AIAnalysisRecord(
         consultation_id=consultation.id,
@@ -282,12 +300,14 @@ def rebuild_document_chunks(db: Session, document: KnowledgeDocument) -> int:
     existing = db.execute(select(KnowledgeChunkMetadata).where(KnowledgeChunkMetadata.document_id == document.id)).scalars().all()
     for item in existing:
         db.delete(item)
+
     chunks = [
-        f"{document.doc_title} 提醒先识别诱因、发病部位与是否伴随瘙痒、疼痛、扩散。",
+        f"{document.doc_title} 提醒先识别诱因、发病部位，以及是否伴随瘙痒、疼痛、扩散等变化。",
         f"{document.doc_title} 建议优先采用温和清洁、规律作息与减少刺激的基础护理策略。",
         f"{document.doc_title} 如果出现渗液、发热、破溃或反复不缓解，应尽快线下就医。",
         f"{document.doc_title} 就诊时建议携带近期照片、既往过敏史和用药情况，便于医生判断。",
     ]
+
     for index, text in enumerate(chunks, start=1):
         db.add(
             KnowledgeChunkMetadata(
@@ -300,6 +320,7 @@ def rebuild_document_chunks(db: Session, document: KnowledgeDocument) -> int:
                 created_at=datetime.utcnow(),
             )
         )
+
     document.chunk_count = len(chunks)
     document.updated_at = datetime.utcnow()
     return len(chunks)

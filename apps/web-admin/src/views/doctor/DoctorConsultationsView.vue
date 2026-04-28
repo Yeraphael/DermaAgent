@@ -24,6 +24,7 @@ const cases = ref<EnrichedConsultation[]>([])
 const loading = ref(false)
 const statusFilter = ref<'ALL' | ConsultationRecord['status']>('ALL')
 const keyword = ref('')
+const selectedImageIndex = ref(0)
 
 const replyForm = reactive({
   first_impression: '',
@@ -65,6 +66,43 @@ function riskTone(risk: string) {
   return 'mint'
 }
 
+function directionTone(index: number) {
+  if (index === 0) return 'rose'
+  if (index === 1) return 'amber'
+  if (index === 2) return 'blue'
+  return 'violet'
+}
+
+function directionPriority(value: number) {
+  if (value >= 65) return '优先排查'
+  if (value >= 40) return '重点观察'
+  return '补充参考'
+}
+
+function directionHint(label: string, index: number) {
+  if (index === 0) return `当前图像表现与“${label}”最接近，建议先围绕近期诱因和症状变化重点核对。`
+  if (index === 1) return `这一方向与现有信息仍有较强关联，可结合患者近期接触物、作息和护理习惯继续排查。`
+  return `可作为补充判断方向，如后续出现扩散、加重或新症状，再结合医生面诊进一步确认。`
+}
+
+function adviceTone(index: number) {
+  if (index === 0) return 'blue'
+  if (index === 1) return 'mint'
+  if (index === 2) return 'amber'
+  return 'violet'
+}
+
+function adviceLabel(index: number) {
+  return ['立即处理', '日常护理', '观察重点', '补充建议'][Math.min(index, 3)]
+}
+
+function adviceHint(index: number) {
+  if (index === 0) return '建议优先执行这一项，再观察 24 到 48 小时内的局部变化。'
+  if (index === 1) return '适合纳入持续护理节奏，重点保持稳定，不要频繁更换产品。'
+  if (index === 2) return '这一项更适合配合记录症状走向，用来判断是否需要进一步干预。'
+  return '可根据患者当前感受和依从性灵活补充。'
+}
+
 const filteredCases = computed(() => {
   const query = keyword.value.trim().toLowerCase()
   return cases.value.filter((item) => {
@@ -86,10 +124,16 @@ const selectedCase = computed(() => {
   return filteredCases.value[0] || null
 })
 
+const selectedImage = computed(() => {
+  const images = selectedCase.value?.images || []
+  return images[selectedImageIndex.value] || images[0] || ''
+})
+
 watch(
   () => selectedCase.value?.case_id,
   () => {
     if (!selectedCase.value) return
+    selectedImageIndex.value = 0
     replyForm.first_impression = selectedCase.value.doctor_reply?.first_impression || ''
     replyForm.care_advice = selectedCase.value.doctor_reply?.care_advice || selectedCase.value.ai_result.advice.join('；')
     replyForm.suggest_offline = selectedCase.value.doctor_reply?.suggest_offline || selectedCase.value.risk_level === 'HIGH'
@@ -219,8 +263,22 @@ onMounted(loadCases)
         </div>
       </div>
 
-      <div class="media-strip" style="margin-top: 18px;">
-        <img v-for="item in selectedCase.images" :key="item" :src="item" alt="skin upload" />
+      <div class="case-gallery" style="margin-top: 18px;">
+        <div class="case-gallery__main">
+          <img :src="selectedImage" :alt="selectedCase.summary_title" />
+        </div>
+        <div v-if="selectedCase.images.length > 1" class="case-gallery__thumbs">
+          <button
+            v-for="(item, index) in selectedCase.images"
+            :key="item"
+            type="button"
+            class="case-gallery__thumb"
+            :class="{ 'is-active': selectedImageIndex === index }"
+            @click="selectedImageIndex = index"
+          >
+            <img :src="item" :alt="`病例图片 ${index + 1}`" />
+          </button>
+        </div>
       </div>
 
       <div class="detail-card" style="margin-top: 18px;">
@@ -232,25 +290,47 @@ onMounted(loadCases)
           <StatusBadge :label="`置信度 ${selectedCase.ai_result.confidence}%`" tone="blue" />
         </div>
         <p class="detail-copy">{{ selectedCase.ai_result.image_observation }}</p>
-        <div class="progress-list" style="margin-top: 18px;">
-          <div
-            v-for="item in selectedCase.ai_result.possible_directions"
+        <div class="insight-stack" style="margin-top: 18px;">
+          <article
+            v-for="(item, index) in selectedCase.ai_result.possible_directions"
             :key="item.label"
-            class="progress-item"
+            class="insight-card"
           >
-            <span>{{ item.label }}</span>
-            <div class="progress-track"><span :style="{ width: `${item.value}%` }" /></div>
-            <strong>{{ item.value }}%</strong>
+            <div class="insight-card__rank">{{ String(index + 1).padStart(2, '0') }}</div>
+            <div class="insight-card__body">
+              <div class="insight-card__meta">
+                <StatusBadge :label="directionPriority(item.value)" :tone="directionTone(index)" />
+                <StatusBadge :label="`${item.value}%`" tone="slate" />
+              </div>
+              <h3 class="insight-card__title">{{ item.label }}</h3>
+              <div class="insight-card__meter"><span :style="{ width: `${item.value}%` }" /></div>
+              <p class="insight-card__copy">{{ directionHint(item.label, index) }}</p>
+            </div>
+          </article>
+        </div>
+        <div class="detail-card" style="margin-top: 18px; padding: 18px;">
+          <div class="tiny-label">护理与处理建议</div>
+          <div class="insight-stack" style="margin-top: 12px;">
+            <article
+              v-for="(item, index) in selectedCase.ai_result.advice"
+              :key="item"
+              class="insight-card"
+            >
+              <div class="insight-card__rank">{{ String(index + 1).padStart(2, '0') }}</div>
+              <div class="insight-card__body">
+                <div class="insight-card__meta">
+                  <StatusBadge :label="adviceLabel(index)" :tone="adviceTone(index)" />
+                </div>
+                <h3 class="insight-card__title">{{ item }}</h3>
+                <p class="insight-card__copy">{{ adviceHint(index) }}</p>
+              </div>
+            </article>
           </div>
         </div>
         <div class="detail-card" style="margin-top: 18px; padding: 18px;">
-          <div class="tiny-label">护理建议</div>
-          <div class="key-value" style="margin-top: 10px;">
-            <div v-for="item in selectedCase.ai_result.advice" :key="item" class="key-value__row">
-              <span>建议</span>
-              <strong>{{ item }}</strong>
-            </div>
-          </div>
+          <div class="tiny-label">处理提醒</div>
+          <p class="detail-copy">{{ selectedCase.ai_result.alert }}</p>
+          <p class="detail-copy" style="margin-top: 10px;">{{ selectedCase.ai_result.recommendation }}</p>
         </div>
       </div>
     </PanelCard>

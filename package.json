@@ -7,6 +7,7 @@
     "apps/web-admin"
   ],
   "scripts": {
+    "dev:clear-ports": "powershell -ExecutionPolicy Bypass -File ./scripts/clear-dev-ports.ps1",
     "diagnose:esbuild": "node ./scripts/test-esbuild-spawn.cjs",
     "dev:user": "npm run dev:h5 --workspace @dermaai/mobile-user",
     "dev:user:mp-weixin": "npm run dev:mp-weixin --workspace @dermaai/mobile-user",

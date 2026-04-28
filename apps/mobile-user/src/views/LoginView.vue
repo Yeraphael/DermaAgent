@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import BrandMark from '../components/BrandMark.vue'
-import { loginPortalUser } from '../shared/portal'
+import { loginUser } from '../services/auth'
 
 const router = useRouter()
 const loading = ref(false)
@@ -17,8 +17,8 @@ async function login() {
   try {
     loading.value = true
     errorMessage.value = ''
-    await loginPortalUser(form.username, form.password)
-    router.replace('/')
+    await loginUser(form.username, form.password)
+    router.replace('/consultation')
   } catch (error) {
     errorMessage.value = (error as Error).message
   } finally {
@@ -31,11 +31,10 @@ async function login() {
   <section class="login-layout">
     <article class="login-hero">
       <BrandMark />
-      <p class="section-eyebrow" style="margin-top: 26px;">AI 皮肤健康 · 智能随行</p>
-      <h1>把图文问诊、AI 辅助分析、医生回复与知识问答放进同一个高保真入口。</h1>
+      <p class="section-eyebrow" style="margin-top: 26px;">智能皮肤健康 · 智能随行</p>
+      <h1>把图文问诊、智能辅助分析、医生回复与护理问答整合进同一套真实可运行的中文入口。</h1>
       <p>
-        用户端完全按照浅色、轻盈、现代的医疗科技产品气质重构，兼顾 Web/H5 展示和小程序可迁移风格。
-        上传图片、提交症状、查看 AI 结果、接收医生回复和持续问答都在同一套设计语言中完成。
+        用户端按照浅色、轻盈、现代的医疗科技产品体验重构，兼顾 Web/H5 展示和小程序可迁移风格。上传图片、提交症状、查看智能结果、接收医生回复和持续问答都在同一套中文界面里完成。
       </p>
 
       <div class="login-card-grid">
@@ -45,19 +44,19 @@ async function login() {
         </article>
         <article>
           <span class="section-eyebrow">业务</span>
-          <strong>问诊 / AI / 问答</strong>
+          <strong>问诊 / 分析 / 问答</strong>
         </article>
         <article>
-          <span class="section-eyebrow">风格</span>
-          <strong>冰川蓝 · 青绿 · 浅紫</strong>
+          <span class="section-eyebrow">状态</span>
+          <strong>已接入真实视觉模型</strong>
         </article>
       </div>
     </article>
 
     <article class="login-panel">
-      <p class="section-eyebrow">DermaAgent User Portal</p>
+      <p class="section-eyebrow">用户登录</p>
       <h2 class="card-title" style="margin-top: 6px;">进入健康空间</h2>
-      <p class="section-subtitle">使用演示账号即可体验完整的用户端问诊流程。</p>
+      <p class="section-subtitle">使用演示账号即可体验完整的图文智能问诊流程。</p>
 
       <div class="page-stack" style="margin-top: 24px;">
         <div class="field">
@@ -69,7 +68,7 @@ async function login() {
           <input v-model="form.password" class="ghost-input" type="password" placeholder="请输入密码" />
         </div>
         <button type="button" class="primary-button" @click="login">
-          {{ loading ? '正在进入…' : '进入我的皮肤健康空间' }}
+          {{ loading ? '正在进入...' : '进入我的皮肤健康空间' }}
         </button>
         <button type="button" class="ghost-button" @click="form.username = 'user01'; form.password = '12345678'">
           使用默认演示账号

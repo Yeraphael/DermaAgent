@@ -18,11 +18,18 @@ from app.service import log_operation
 
 router = APIRouter()
 settings = get_settings()
+MAX_IMAGE_SIZE = 7 * 1024 * 1024
+ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 @router.get("/announcements")
 def list_announcements(request: Request, db: Session = Depends(get_db)) -> dict:
-    rows = db.execute(select(Announcement).where(Announcement.status == 1).order_by(Announcement.published_at.desc(), Announcement.id.desc())).scalars().all()
+    rows = db.execute(
+        select(Announcement)
+        .where(Announcement.status == 1)
+        .order_by(Announcement.published_at.desc(), Announcement.id.desc())
+    ).scalars().all()
     data = [
         {
             "announcement_id": row.id,
@@ -46,20 +53,40 @@ async def upload_image(
 ) -> dict:
     if not file.filename:
         raise HTTPException(status_code=400, detail="缺少文件名")
+
     suffix = ""
     if "." in file.filename:
         suffix = "." + file.filename.rsplit(".", 1)[-1].lower()
-    if suffix not in {".jpg", ".jpeg", ".png", ".webp"}:
-        raise HTTPException(status_code=400, detail="仅支持 jpg/jpeg/png/webp 图片")
+    if suffix not in ALLOWED_SUFFIXES:
+        raise HTTPException(status_code=400, detail="仅支持 JPG、PNG、WEBP 图片")
+    if file.content_type and file.content_type not in ALLOWED_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="图片类型不合法，请上传 JPG、PNG 或 WEBP")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="上传图片内容为空")
+    if len(content) > MAX_IMAGE_SIZE:
+        raise HTTPException(status_code=400, detail="图片大小不能超过 7MB")
+
     target_dir = settings.upload_path / scene
     target_dir.mkdir(parents=True, exist_ok=True)
     filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{user.id}-{abs(hash(file.filename)) % 99999}{suffix}"
     target_file = target_dir / filename
-    content = await file.read()
     target_file.write_bytes(content)
+
     file_url = f"{settings.base_url}/uploads/{scene}/{filename}"
-    log_operation(db, user.id, user.role_type, "FILE", "UPLOAD_IMAGE", filename, f"上传图片 {file.filename}", request.client.host if request.client else None)
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "FILE",
+        "UPLOAD_IMAGE",
+        filename,
+        f"上传图片 {file.filename}",
+        request.client.host if request.client else None,
+    )
     db.commit()
+
     return response_envelope(
         request,
         {

@@ -1,6 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
-import { getPortalSession } from './shared/portal'
+import { getSession } from './services/session'
 import AnalysisView from './views/AnalysisView.vue'
 import ConsultationView from './views/ConsultationView.vue'
 import HealthView from './views/HealthView.vue'
@@ -25,12 +25,12 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const session = getPortalSession()
+  const session = getSession()
   if (to.name !== 'login' && !session?.access_token) {
     return '/login'
   }
   if (to.name === 'login' && session?.access_token) {
-    return '/'
+    return '/consultation'
   }
   return true
 })

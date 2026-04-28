@@ -33,13 +33,17 @@ Desktop.ini
 
 # Runtime files
 *.log
+tmp-*.err
+tmp-*.out
+tmp-*.pid
+*.stackdump
 apps/backend/storage/uploads/
 backend/uploads/
 backend/uploads/**
 /backend/uploads/
 apps/mobile-user/.index.html.h5-backup
 
-# 忽略这几个文档
+# Local docs not intended for version control
 肤联智诊_接口文档.md
 肤联智诊_系统分析文档.md
 肤联智诊_系统设计文档.md

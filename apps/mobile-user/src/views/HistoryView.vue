@@ -1,33 +1,45 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import RiskBadge from '../components/RiskBadge.vue'
-import { getPortalConsultations, getPortalNotifications, getPortalRiskLabel, getPortalStatusLabel } from '../shared/portal'
+import {
+  fetchMyConsultations,
+  fetchUserNotifications,
+  notificationKind,
+  type ConsultationSummary,
+  type UserNotification,
+} from '../services/consultation'
+
+type TimelineFilter = 'ALL' | 'AI' | 'DOCTOR' | 'SYSTEM'
 
 const router = useRouter()
-const filter = ref<'ALL' | 'AI' | 'DOCTOR' | 'SYSTEM'>('ALL')
+const filter = ref<TimelineFilter>('ALL')
+const loading = ref(false)
+const errorMessage = ref('')
+const consultations = ref<ConsultationSummary[]>([])
+const notifications = ref<UserNotification[]>([])
 
 const timeline = computed(() => {
-  const consultations = getPortalConsultations().map((item) => ({
-    id: item.caseId,
-    kind: item.status === 'DOCTOR_REPLIED' ? 'DOCTOR' : 'AI',
-    title: item.title,
-    summary: item.ai.observation,
-    meta: `${item.caseNo} · ${getPortalStatusLabel(item.status)} · ${getPortalRiskLabel(item.riskLevel)}`,
-    caseId: item.caseId,
+  const consultationItems = consultations.value.map((item) => ({
+    id: item.case_id,
+    kind: item.doctor_reply ? 'DOCTOR' : 'AI',
+    title: item.summary_title,
+    summary: item.ai_result?.image_observation || '已生成问诊记录，点击查看详情。',
+    meta: item.case_no,
+    caseId: item.case_id,
   }))
 
-  const notifications = getPortalNotifications().map((item) => ({
-    id: item.id,
-    kind: item.category,
+  const notificationItems = notifications.value.map((item) => ({
+    id: item.notification_id,
+    kind: notificationKind(item),
     title: item.title,
-    summary: item.summary,
-    meta: item.time,
-    caseId: item.linkedCaseId,
+    summary: item.content,
+    meta: item.created_at,
+    caseId: item.related_business_id || undefined,
   }))
 
-  return [...consultations, ...notifications].filter((item) => filter.value === 'ALL' || item.kind === filter.value)
+  return [...consultationItems, ...notificationItems].filter((item) => filter.value === 'ALL' || item.kind === filter.value)
 })
 
 function tone(kind: string) {
@@ -35,6 +47,33 @@ function tone(kind: string) {
   if (kind === 'SYSTEM') return 'violet'
   return 'blue'
 }
+
+function kindLabel(kind: string) {
+  if (kind === 'DOCTOR') return '医生回复'
+  if (kind === 'SYSTEM') return '系统通知'
+  return '智能分析'
+}
+
+async function loadTimeline() {
+  try {
+    loading.value = true
+    errorMessage.value = ''
+
+    const [caseList, notificationList] = await Promise.all([
+      fetchMyConsultations(1, 20),
+      fetchUserNotifications(1, 20),
+    ])
+
+    consultations.value = caseList.list
+    notifications.value = notificationList.list
+  } catch (error) {
+    errorMessage.value = (error as Error).message
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadTimeline)
 </script>
 
 <template>
@@ -43,19 +82,31 @@ function tone(kind: string) {
       <div class="section-head">
         <div>
           <p class="section-eyebrow">历史记录与通知</p>
-          <h1 class="section-title">所有关键节点都收口在一个时间线里</h1>
-          <p class="section-subtitle">AI 分析完成、医生回复、系统通知与历史病例统一用同一套卡片层级展示。</p>
+          <h1 class="section-title">所有关键节点都收口在同一条时间线</h1>
+          <p class="section-subtitle">智能分析、医生回复和系统通知都来自后端真实数据，不再使用演示状态。</p>
         </div>
       </div>
       <div class="segment">
         <button type="button" :class="{ 'is-active': filter === 'ALL' }" @click="filter = 'ALL'">全部</button>
-        <button type="button" :class="{ 'is-active': filter === 'AI' }" @click="filter = 'AI'">AI 分析</button>
+        <button type="button" :class="{ 'is-active': filter === 'AI' }" @click="filter = 'AI'">智能分析</button>
         <button type="button" :class="{ 'is-active': filter === 'DOCTOR' }" @click="filter = 'DOCTOR'">医生回复</button>
         <button type="button" :class="{ 'is-active': filter === 'SYSTEM' }" @click="filter = 'SYSTEM'">系统通知</button>
       </div>
     </article>
 
-    <div class="timeline-list">
+    <article v-if="loading" class="surface-card">
+      <p class="section-eyebrow">加载中</p>
+      <h2 class="card-title">正在拉取历史记录...</h2>
+    </article>
+
+    <article v-else-if="errorMessage" class="surface-card">
+      <p class="section-eyebrow">加载失败</p>
+      <h2 class="card-title">历史时间线加载失败</h2>
+      <p class="card-copy">{{ errorMessage }}</p>
+      <button type="button" class="primary-button" style="margin-top: 18px;" @click="loadTimeline">重新加载</button>
+    </article>
+
+    <div v-else class="timeline-list">
       <article
         v-for="item in timeline"
         :key="`${item.kind}-${item.id}`"
@@ -65,7 +116,7 @@ function tone(kind: string) {
         <strong>{{ item.title }}</strong>
         <p>{{ item.summary }}</p>
         <div class="action-row" style="margin-top: 12px;">
-          <RiskBadge :label="item.kind" :tone="tone(item.kind)" />
+          <RiskBadge :label="kindLabel(item.kind)" :tone="tone(item.kind)" />
         </div>
         <span>{{ item.meta }}</span>
       </article>

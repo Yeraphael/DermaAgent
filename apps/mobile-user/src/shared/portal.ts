@@ -128,7 +128,7 @@ const initialState: PortalState = {
       status: 'DOCTOR_REPLIED',
       riskLevel: 'MEDIUM',
       ai: {
-        observation: '可见面颊与下巴区域片状潮红，局部轻度丘疹，整体更像刺激后屏障受损并伴有轻度炎症。',
+        observation: '可见面颊与下巴区域片状潮红，局部伴轻度丘疹，整体更像刺激后屏障受损并伴有轻度炎症。',
         directions: [
           { label: '接触性皮炎', value: 45 },
           { label: '湿疹样反应', value: 25 },
@@ -136,9 +136,9 @@ const initialState: PortalState = {
           { label: '屏障受损', value: 15 },
         ],
         careAdvice: [
-          '暂停新增护肤品，优先使用温和洁面与修护乳。',
+          '暂停新增护肤品，优先使用温和洁面与修护保湿产品。',
           '避免热水、酒精喷雾和过度清洁，减少刺激叠加。',
-          '如 48 小时内继续扩散或出现灼热加重，建议线下复核。',
+          '如果 48 小时内继续扩散或出现灼热加重，建议线下面诊。',
         ],
         recommendation: '当前更建议以修护观察为主，并结合医生回复做进一步判断。',
         shouldVisit: false,
@@ -148,11 +148,11 @@ const initialState: PortalState = {
       doctorReply: {
         doctorName: '张医生',
         title: '皮肤科 主治医师',
-        content: '结合图片和描述，考虑更偏向于刺激性皮炎或护肤品不耐受。建议先简化护肤，重点保湿修护，避免热刺激和搓洗。',
+        content: '结合图片和描述，考虑更偏向刺激性皮炎或护肤品不耐受。建议先精简护肤，重点保湿修护，避免热刺激和揉搓。',
         suggestion: [
           '温和清洁，每日 2 次以内。',
           '减少刺激性活性成分叠加。',
-          '若持续加重或出现渗液，请尽快线下面诊。',
+          '如果持续加重或出现渗液，请尽快线下面诊。',
         ],
         repliedAt: '04-21 14:36',
       },
@@ -160,7 +160,7 @@ const initialState: PortalState = {
     {
       caseId: 201002,
       caseNo: 'AI-20260420-009',
-      title: '下巴密集丘疹与油脂分泌增多',
+      title: '下巴密集丘疹与出油增加',
       submittedAt: '04-20 19:18',
       onsetDuration: '3 天内',
       itchLevel: 1,
@@ -206,7 +206,7 @@ const initialState: PortalState = {
       visuals: [
         createVisual('#f2d4c4', '#eab8a8', '#f9d0c7'),
       ],
-      description: '最近频繁去角质后出现干燥脱皮，洗脸后灼热和刺痛，范围正在扩展到鼻翼。',
+      description: '最近频繁去角质后出现干燥脱皮，洗脸后灼热和刺痛，范围正在扩大到鼻翼。',
       status: 'WAIT_DOCTOR',
       riskLevel: 'MEDIUM',
       ai: {
@@ -233,14 +233,14 @@ const initialState: PortalState = {
     {
       id: 1,
       question: '湿疹和过敏有什么区别？',
-      answer: '湿疹更强调皮肤屏障受损后的炎症反应，常伴反复瘙痒和干燥；过敏更强调对外界刺激或成分的免疫反应，通常需要结合接触史判断。',
-      reference: '特应性皮炎与接触性皮炎护理指南',
+      answer: '湿疹更强调皮肤屏障受损后的炎症反应，常伴反复瘙痒和干燥。过敏更强调对外界刺激或成分的免疫反应，通常需要结合接触史来判断。',
+      reference: '特应性皮炎与接触性皮炎护理指引',
       createdAt: '04-21 11:42',
     },
     {
       id: 2,
       question: '面部泛红时还能刷酸吗？',
-      answer: '不建议在屏障受损和泛红明显时继续刷酸，优先修护和观察更稳妥。',
+      answer: '不建议在屏障受损和泛红明显时继续刷酸，应先修护并观察，等皮肤状态稳定后再评估是否恢复使用。',
       reference: '敏感肌护理共识',
       createdAt: '04-20 18:32',
     },
@@ -249,7 +249,7 @@ const initialState: PortalState = {
     {
       id: 1,
       category: 'AI',
-      title: 'AI 分析已完成',
+      title: '智能分析已完成',
       summary: '你提交的图文问诊已生成初步观察与护理建议。',
       time: '14:30',
       linkedCaseId: 201002,
@@ -312,6 +312,7 @@ function readState(): PortalState {
     storage.setItem(STATE_KEY, JSON.stringify(seeded))
     return seeded
   }
+
   try {
     return JSON.parse(raw) as PortalState
   } catch {
@@ -335,7 +336,7 @@ function mutateState<T>(handler: (state: PortalState) => T): T {
 function getStatusLabel(status: PortalStatus) {
   return {
     WAIT_ANALYSIS: '等待分析',
-    AI_DONE: 'AI 已完成',
+    AI_DONE: '智能已完成',
     WAIT_DOCTOR: '等待医生',
     DOCTOR_REPLIED: '医生已回复',
   }[status]
@@ -343,7 +344,7 @@ function getStatusLabel(status: PortalStatus) {
 
 function buildDirections(description: string, itchLevel: number, painLevel: number, spreadFlag: boolean): PortalDirection[] {
   const lower = description.toLowerCase()
-  if (lower.includes('痘') || lower.includes('丘疹')) {
+  if (lower.includes('痘') || lower.includes('丘疹') || lower.includes('acne') || lower.includes('pimple')) {
     return [
       { label: '轻中度痤疮', value: 55 },
       { label: '口周皮炎', value: 20 },
@@ -351,7 +352,8 @@ function buildDirections(description: string, itchLevel: number, painLevel: numb
       { label: '激素依赖', value: 10 },
     ]
   }
-  if (lower.includes('脱皮') || lower.includes('干')) {
+
+  if (lower.includes('脱皮') || lower.includes('干') || lower.includes('dry')) {
     return [
       { label: '屏障受损', value: 48 },
       { label: '刺激性皮炎', value: 28 },
@@ -359,6 +361,7 @@ function buildDirections(description: string, itchLevel: number, painLevel: numb
       { label: '脂溢性皮炎', value: 10 },
     ]
   }
+
   if (spreadFlag || itchLevel >= 4 || painLevel >= 4) {
     return [
       { label: '湿疹样反应', value: 34 },
@@ -367,6 +370,7 @@ function buildDirections(description: string, itchLevel: number, painLevel: numb
       { label: '感染风险', value: 16 },
     ]
   }
+
   return [
     { label: '接触性皮炎', value: 42 },
     { label: '湿疹样反应', value: 26 },
@@ -377,8 +381,7 @@ function buildDirections(description: string, itchLevel: number, painLevel: numb
 
 function synthesizeConsultationTitle(description: string) {
   if (!description.trim()) return '图文问诊'
-  const compact = description.replace(/[，。,.]/g, ' ').split(' ').filter(Boolean)[0]
-  return compact.length > 14 ? `${compact.slice(0, 14)}…` : compact
+  return description.replace(/[，。！？；,.!?]/g, ' ').trim().slice(0, 14)
 }
 
 function synthesizeRisk(itchLevel: number, painLevel: number, spreadFlag: boolean, description: string): PortalRisk {
@@ -404,14 +407,17 @@ function buildCareAdvice(risk: PortalRisk, description: string) {
     '保持温和清洁，避免频繁摩擦和热水刺激。',
     '优先使用简单修护保湿产品，暂停最近新增的高活性护肤品。',
   ]
-  if (lower.includes('痘') || lower.includes('丘疹')) {
-    list.push('不要频繁挤压，夜间可使用轻薄型保湿产品并注意作息。')
+
+  if (lower.includes('痘') || lower.includes('丘疹') || lower.includes('acne') || lower.includes('pimple')) {
+    list.push('不要频繁挤压皮损，夜间可使用轻薄型保湿产品并注意作息。')
   } else {
     list.push('减少酒精、香精和去角质类产品叠加使用。')
   }
+
   if (risk !== 'LOW') {
-    list.push('若 48 小时内继续加重、扩散或出现明显疼痛，请尽快就医。')
+    list.push('如果 48 小时内继续加重、扩散或出现明显疼痛，请及时就医。')
   }
+
   return list
 }
 
@@ -460,7 +466,7 @@ export function getPortalRiskLabel(risk: PortalRisk) {
 
 export function buildVisualStyle(value: string) {
   const trimmed = value.trim()
-  if (trimmed.startsWith('url(') || trimmed.startsWith('http') || trimmed.startsWith('blob:')) {
+  if (trimmed.startsWith('url(') || trimmed.startsWith('http') || trimmed.startsWith('blob:') || trimmed.startsWith('data:image/')) {
     return {
       backgroundImage: trimmed.startsWith('url(') ? trimmed : `url(${trimmed})`,
       backgroundSize: 'cover',
@@ -496,7 +502,7 @@ export function getPortalDashboard() {
     notifications: state.notifications,
     quickActions: [
       { key: 'consultation', label: '图文问诊', description: '上传图片与症状' },
-      { key: 'analysis', label: 'AI 分析', description: '查看结果报告' },
+      { key: 'analysis', label: '智能分析', description: '查看结果报告' },
       { key: 'qa', label: '知识问答', description: '护理与科普' },
       { key: 'history', label: '历史记录', description: '问诊与通知' },
     ],
@@ -540,9 +546,9 @@ export function getPortalQaSnapshot() {
   return {
     suggestions: [
       '湿疹和过敏有什么区别？',
-      '如何判断是否是屏障受损？',
+      '如何判断是不是屏障受损？',
       '敏感肌如何选择护肤品？',
-      '泛红期间可以自愈吗？',
+      '泛红期间可以自行恢复吗？',
     ],
     history: state.qaHistory,
   }
@@ -550,12 +556,12 @@ export function getPortalQaSnapshot() {
 
 export async function askPortalQuestion(question: string) {
   const lowered = question.toLowerCase()
-  let answer = '建议先减少刺激源，观察是否与近期护肤、作息或环境变化有关；如持续加重，最好结合图文问诊进一步判断。'
+  let answer = '建议先减少刺激源，观察是否与近期护肤、作息或环境变化有关。如果持续加重，最好结合图文问诊进一步判断。'
   let reference = '通用皮肤护理建议'
 
   if (lowered.includes('湿疹') || lowered.includes('过敏')) {
-    answer = '湿疹更像是皮肤屏障受损后的炎症反复，通常会伴随瘙痒和干燥；过敏则更强调对外界成分或刺激的反应，需要结合接触史判断。'
-    reference = '特应性皮炎与接触性皮炎护理指南'
+    answer = '湿疹更像是皮肤屏障受损后的炎症反复，通常会伴随瘙痒和干燥。过敏则更强调对外界成分或刺激的反应，需要结合接触史来判断。'
+    reference = '特应性皮炎与接触性皮炎护理指引'
   } else if (lowered.includes('泛红') || lowered.includes('屏障')) {
     answer = '如果在清洁、热刺激或活性护肤后更容易出现泛红、刺痛和紧绷，往往提示屏障受损。此时不建议继续刷酸，应该先修护。'
     reference = '敏感肌与屏障修护共识'
@@ -586,10 +592,12 @@ export async function submitPortalConsultation(payload: SubmitConsultationPayloa
   const risk = synthesizeRisk(payload.itchLevel, payload.painLevel, payload.spreadFlag, payload.description)
   const directions = buildDirections(payload.description, payload.itchLevel, payload.painLevel, payload.spreadFlag)
   const nextCaseId = Number(`20${Date.now().toString().slice(-5)}`)
+  const title = synthesizeConsultationTitle(payload.description)
+
   const caseRecord: PortalConsultation = {
     caseId: nextCaseId,
     caseNo: `AI-${new Date().getFullYear()}${String(Date.now()).slice(-8)}`,
-    title: synthesizeConsultationTitle(payload.description),
+    title,
     submittedAt: '刚刚',
     onsetDuration: payload.onsetDuration,
     itchLevel: payload.itchLevel,
@@ -624,8 +632,8 @@ export async function submitPortalConsultation(payload: SubmitConsultationPayloa
     state.notifications.unshift({
       id: Date.now(),
       category: 'AI',
-      title: '新的 AI 分析已生成',
-      summary: `${caseRecord.title} 已生成初步观察与护理建议。`,
+      title: '新的智能分析已生成',
+      summary: `${title} 已生成初步观察与护理建议。`,
       time: '刚刚',
       linkedCaseId: caseRecord.caseId,
     })

@@ -3,30 +3,47 @@ import { computed, ref, watch } from 'vue'
 import { RouterLink, RouterView, useRoute } from 'vue-router'
 
 import BrandMark from './components/BrandMark.vue'
-import { clearPortalSession, getPortalSession } from './shared/portal'
+import { logoutUser } from './services/auth'
+import { getSession } from './services/session'
 
 const route = useRoute()
 const showChrome = computed(() => route.name !== 'login')
-const session = ref(getPortalSession())
+const session = ref(getSession())
 
 const navItems = [
-  { to: '/', label: '首页' },
-  { to: '/consultation', label: '智能问诊' },
-  { to: '/analysis', label: 'AI 分析' },
-  { to: '/qa', label: '知识问答' },
-  { to: '/history', label: '历史记录' },
-  { to: '/health', label: '健康档案' },
+  { to: '/', label: '\u9996\u9875' },
+  { to: '/consultation', label: '\u667a\u80fd\u95ee\u8bca' },
+  { to: '/analysis', label: '\u667a\u80fd\u5206\u6790' },
+  { to: '/qa', label: '\u77e5\u8bc6\u95ee\u7b54' },
+  { to: '/history', label: '\u5386\u53f2\u8bb0\u5f55' },
+  { to: '/health', label: '\u5065\u5eb7\u6863\u6848' },
 ]
 
+const logoutLabel = '\u9000\u51fa'
+const fallbackUserName = '\u7528\u6237'
+const fallbackSkinType = '\u672a\u5b8c\u5584\u6863\u6848'
+
 function logout() {
-  clearPortalSession()
+  logoutUser()
   window.location.hash = '#/login'
 }
+
+const userDisplay = computed(() => {
+  const current = session.value
+  const name = current?.profile?.real_name || current?.account?.username || fallbackUserName
+  const skinType = current?.health_profile?.skin_type || fallbackSkinType
+
+  return {
+    name,
+    avatar: name.slice(0, 1).toUpperCase(),
+    skinType,
+  }
+})
 
 watch(
   () => route.fullPath,
   () => {
-    session.value = getPortalSession()
+    session.value = getSession()
   },
   { immediate: true },
 )
@@ -47,13 +64,13 @@ watch(
       </nav>
       <div class="portal-header__actions">
         <div class="portal-user">
-          <span class="portal-user__avatar">{{ session?.profile.real_name.slice(0, 1) }}</span>
+          <span class="portal-user__avatar">{{ userDisplay.avatar }}</span>
           <div>
-            <strong>{{ session?.profile.real_name }}</strong>
-            <span>{{ session?.profile.skin_type }}</span>
+            <strong>{{ userDisplay.name }}</strong>
+            <span>{{ userDisplay.skinType }}</span>
           </div>
         </div>
-        <button type="button" class="ghost-button" @click="logout">退出</button>
+        <button type="button" class="ghost-button" @click="logout">{{ logoutLabel }}</button>
       </div>
     </header>
 

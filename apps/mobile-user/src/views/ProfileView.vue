@@ -39,7 +39,7 @@ const data = computed(() => getPortalProfile())
         <div class="section-head">
           <div>
             <p class="section-eyebrow">护理计划</p>
-            <h2 class="card-title">长期陪伴感</h2>
+            <h2 class="card-title">长期陪伴建议</h2>
           </div>
         </div>
         <div class="timeline-list">
@@ -54,12 +54,12 @@ const data = computed(() => getPortalProfile())
         <div class="section-head">
           <div>
             <p class="section-eyebrow">偏好与档案</p>
-            <h2 class="card-title">关键健康信息</h2>
+            <h2 class="card-title">关键信息</h2>
           </div>
         </div>
         <div class="timeline-list">
           <article class="timeline-item">
-            <strong>过敏史</strong>
+            <strong>过敏项</strong>
             <p>{{ data.healthArchive.allergies.join('、') }}</p>
           </article>
           <article class="timeline-item">
