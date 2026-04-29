@@ -51,10 +51,10 @@ export async function request<T = unknown>(url: string, options: RequestOptions 
 
   if (!response.ok) {
     if (payload && typeof payload === 'object') {
-      throw new Error(payload.detail || payload.message || '请求失败')
+      throw new Error(payload.detail || payload.message || '请求失败，请稍后重试')
     }
 
-    throw new Error(typeof payload === 'string' && payload ? payload : '请求失败')
+    throw new Error(typeof payload === 'string' && payload ? payload : '请求失败，请稍后重试')
   }
 
   if (payload && typeof payload === 'object') {

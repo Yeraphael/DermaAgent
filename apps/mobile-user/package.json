@@ -14,6 +14,7 @@
     "@dcloudio/uni-app": "3.0.0-5000720260410001",
     "@dcloudio/uni-mp-weixin": "^3.0.0-5000720260410001",
     "@dcloudio/vite-plugin-uni": "3.0.0-5000720260410001",
+    "markdown-it": "^14.1.1",
     "vue": "3.4.28",
     "vue-router": "4.4.0"
   },

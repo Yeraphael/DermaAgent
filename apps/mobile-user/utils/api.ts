@@ -49,7 +49,7 @@ export function request<T = any>(url: string, options: RequestOptions = {}) {
           resolve(data.data)
           return
         }
-        reject(new Error(data?.detail || data?.message || '请求失败'))
+        reject(new Error(data?.detail || data?.message || '请求失败，请稍后重试'))
       },
       fail: (error) => reject(error),
     })
@@ -74,7 +74,7 @@ export function uploadImage(filePath: string) {
           resolve(data.data)
           return
         }
-        reject(new Error(data?.detail || data?.message || '上传失败'))
+        reject(new Error(data?.detail || data?.message || '上传失败，请稍后重试'))
       },
       fail: (error) => reject(error),
     })

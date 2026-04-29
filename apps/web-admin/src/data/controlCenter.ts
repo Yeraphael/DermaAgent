@@ -2,7 +2,6 @@ export type WorkspaceRole = 'DOCTOR' | 'ADMIN'
 export type ConsultationRisk = 'LOW' | 'MEDIUM' | 'HIGH'
 export type ConsultationStatus = 'WAIT_DOCTOR' | 'AI_DONE' | 'DOCTOR_REPLIED' | 'CLOSED'
 export type AuditStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-export type KnowledgeStage = 'UPLOADED' | 'PARSED' | 'CHUNKED' | 'EMBEDDED' | 'ENABLED'
 
 export type ControlCenterAccount = {
   account_id: number
@@ -96,18 +95,6 @@ export type UserRecord = {
   tag: string
 }
 
-export type KnowledgeDocument = {
-  document_id: number
-  doc_title: string
-  category: string
-  file_type: string
-  file_size: string
-  stage: KnowledgeStage
-  uploaded_at: string
-  chunk_count: number
-  enabled_flag: 0 | 1
-}
-
 export type ConfigRecord = {
   config_key: string
   title: string
@@ -150,7 +137,6 @@ type ControlCenterState = {
   doctors: DoctorRecord[]
   patients: PatientRecord[]
   consultations: ConsultationRecord[]
-  knowledgeDocuments: KnowledgeDocument[]
   configs: ConfigRecord[]
   operationLogs: OperationLog[]
   modelLogs: ModelLog[]
@@ -176,7 +162,7 @@ type AnnouncementPayload = {
   scope: 'ALL' | 'DOCTOR' | 'USER'
 }
 
-const STORAGE_KEY = 'derma-web-control-center'
+const STORAGE_KEY = 'derma-web-control-center-v2'
 
 const adminAccount: ControlCenterAccount = {
   account_id: 9001,
@@ -720,63 +706,6 @@ const mockStateSeed: ControlCenterState = {
       },
     },
   ],
-  knowledgeDocuments: [
-    {
-      document_id: 1,
-      doc_title: '痤疮诊疗指南（2025 更新）',
-      category: '常见皮肤病',
-      file_type: 'PDF',
-      file_size: '2.4 MB',
-      stage: 'ENABLED',
-      uploaded_at: '2026-04-21 14:20',
-      chunk_count: 32,
-      enabled_flag: 1,
-    },
-    {
-      document_id: 2,
-      doc_title: '特应性皮炎诊疗共识.docx',
-      category: '炎症性疾病',
-      file_type: 'DOCX',
-      file_size: '1.1 MB',
-      stage: 'EMBEDDED',
-      uploaded_at: '2026-04-21 14:18',
-      chunk_count: 24,
-      enabled_flag: 1,
-    },
-    {
-      document_id: 3,
-      doc_title: '银屑病护理流程.pdf',
-      category: '护理规范',
-      file_type: 'PDF',
-      file_size: '3.6 MB',
-      stage: 'CHUNKED',
-      uploaded_at: '2026-04-21 14:15',
-      chunk_count: 18,
-      enabled_flag: 0,
-    },
-    {
-      document_id: 4,
-      doc_title: '皮肤镜检查规范.pdf',
-      category: '辅助检查',
-      file_type: 'PDF',
-      file_size: '1.8 MB',
-      stage: 'PARSED',
-      uploaded_at: '2026-04-21 14:10',
-      chunk_count: 0,
-      enabled_flag: 0,
-    },
-    {
-      document_id: 5,
-      doc_title: '常见皮肤问答素材.zip',
-      category: 'RAG 素材',
-      file_type: 'ZIP',
-      file_size: '45.2 MB',
-      stage: 'UPLOADED',
-      uploaded_at: '2026-04-21 14:05',
-      chunk_count: 0,
-      enabled_flag: 0,
-    },
-  ],
   configs: [
     {
       config_key: 'prompt_version',
@@ -820,7 +749,7 @@ const mockStateSeed: ControlCenterState = {
     {
       log_id: 2,
       operator: '管理员',
-      module_name: '知识库',
+      module_name: '文本问答',
       operation_type: '上传',
       operation_desc: '上传痤疮诊疗指南（2025 更新）。',
       created_at: '2026-04-21 14:20:10',
@@ -867,13 +796,13 @@ const mockStateSeed: ControlCenterState = {
     },
     {
       log_id: 2,
-      biz_type: 'RAG 问答',
+      biz_type: '联网搜索问答',
       model_name: 'GPT-4.1 Mini',
       duration: '1.4 s',
       token_cost: '1,280',
       created_at: '2026-04-21 10:02:11',
       status: 'SUCCESS',
-      summary: '调用护理知识库生成居家护理建议。',
+      summary: '调用 Tavily 检索公开资料并生成最新问答回复。',
     },
     {
       log_id: 3,
@@ -906,8 +835,8 @@ const mockStateSeed: ControlCenterState = {
     },
     {
       announcement_id: 2,
-      title: '知识库新增痤疮护理指南',
-      content: 'RAG 问答已同步接入最新痤疮护理指南，可用于用户端日常问答与医生辅助答复。',
+      title: '文本问答已支持联网检索',
+      content: '用户端文本问答现已支持按需联网搜索公开资料，并展示来源链接。',
       scope: 'ALL',
       created_at: '2026-04-21 11:42',
     },
@@ -965,15 +894,6 @@ function formatDelta(current: number, previous: number) {
 
 function previousTotals(total: number) {
   return Math.max(Math.round(total * 0.92), 1)
-}
-
-function stageIndex(stage: KnowledgeStage) {
-  return ['UPLOADED', 'PARSED', 'CHUNKED', 'EMBEDDED', 'ENABLED'].indexOf(stage)
-}
-
-function nextStage(stage: KnowledgeStage): KnowledgeStage {
-  const stages: KnowledgeStage[] = ['UPLOADED', 'PARSED', 'CHUNKED', 'EMBEDDED', 'ENABLED']
-  return stages[Math.min(stageIndex(stage) + 1, stages.length - 1)]
 }
 
 function enrichConsultation(state: ControlCenterState, item: ConsultationRecord) {
@@ -1105,13 +1025,13 @@ export async function getAdminWorkspace() {
   const consultations = state.consultations
   const highRisk = consultations.filter((item) => item.risk_level === 'HIGH').length
   const aiCalls = consultations.length * 27 + 93
-  const ragCalls = state.knowledgeDocuments.length * 128 + 43
+  const webSearchCalls = state.modelLogs.filter((item) => item.biz_type === '联网搜索问答').length * 128 + 43
   const metrics = [
     { label: '用户总数', value: state.users.length * 2489, change: formatDelta(state.users.length * 2489, previousTotals(state.users.length * 2489)), accent: 'blue' },
     { label: '医生总数', value: state.doctors.length * 251, change: formatDelta(state.doctors.length * 251, previousTotals(state.doctors.length * 251)), accent: 'violet' },
     { label: '问诊总量', value: consultations.length * 8112, change: formatDelta(consultations.length * 8112, previousTotals(consultations.length * 8112)), accent: 'sky' },
     { label: 'AI 调用次数', value: aiCalls, change: '+15.7%', accent: 'mint' },
-    { label: 'RAG 问答次数', value: ragCalls, change: '+14.1%', accent: 'lilac' },
+    { label: '联网问答次数', value: webSearchCalls, change: '+14.1%', accent: 'lilac' },
     { label: '高风险问诊量', value: highRisk * 88, change: '+7.8%', accent: 'rose' },
   ]
 
@@ -1120,7 +1040,6 @@ export async function getAdminWorkspace() {
     users: clone(state.users),
     doctors: clone(state.doctors),
     consultations: state.consultations.map((item) => enrichConsultation(state, item)),
-    knowledgeDocuments: clone(state.knowledgeDocuments),
     configs: clone(state.configs),
     operationLogs: clone(state.operationLogs),
     modelLogs: clone(state.modelLogs),
@@ -1156,33 +1075,6 @@ export async function toggleDoctorService(doctorId: number) {
   })
 }
 
-export async function advanceKnowledgeDocument(documentId: number) {
-  mutateState((state) => {
-    const target = state.knowledgeDocuments.find((item) => item.document_id === documentId)
-    if (target) {
-      target.stage = nextStage(target.stage)
-      if (target.stage === 'CHUNKED' && !target.chunk_count) {
-        target.chunk_count = 18
-      }
-      if (target.stage === 'ENABLED') {
-        target.enabled_flag = 1
-      }
-    }
-  })
-}
-
-export async function toggleKnowledgeEnabled(documentId: number) {
-  mutateState((state) => {
-    const target = state.knowledgeDocuments.find((item) => item.document_id === documentId)
-    if (target) {
-      target.enabled_flag = target.enabled_flag === 1 ? 0 : 1
-      if (target.enabled_flag === 1) {
-        target.stage = 'ENABLED'
-      }
-    }
-  })
-}
-
 export async function updateConfig(configKey: string, configValue: ConfigRecord['config_value']) {
   mutateState((state) => {
     const target = state.configs.find((item) => item.config_key === configKey)
@@ -1202,16 +1094,6 @@ export async function publishAnnouncement(payload: AnnouncementPayload) {
       created_at: '2026-04-21 15:20',
     })
   })
-}
-
-export function getStageLabel(stage: KnowledgeStage) {
-  return {
-    UPLOADED: '已上传',
-    PARSED: '已解析',
-    CHUNKED: '已切片',
-    EMBEDDED: '已向量化',
-    ENABLED: '可检索',
-  }[stage]
 }
 
 export function getConsultationStatusLabel(status: ConsultationStatus) {

@@ -9,9 +9,9 @@ DROP TABLE IF EXISTS `doctor_ai_feedbacks`;
 DROP TABLE IF EXISTS `notifications`;
 DROP TABLE IF EXISTS `announcements`;
 DROP TABLE IF EXISTS `system_configs`;
-DROP TABLE IF EXISTS `knowledge_chunks_metadata`;
-DROP TABLE IF EXISTS `knowledge_documents`;
-DROP TABLE IF EXISTS `qa_records`;
+DROP TABLE IF EXISTS `tool_call_logs`;
+DROP TABLE IF EXISTS `chat_messages`;
+DROP TABLE IF EXISTS `chat_sessions`;
 DROP TABLE IF EXISTS `consultation_replies`;
 DROP TABLE IF EXISTS `consultation_messages`;
 DROP TABLE IF EXISTS `ai_analysis_records`;
@@ -182,50 +182,44 @@ CREATE TABLE `consultation_replies` (
   CONSTRAINT `fk_consultation_replies_doctor_id` FOREIGN KEY (`doctor_id`) REFERENCES `doctors` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE `qa_records` (
+CREATE TABLE `chat_sessions` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
   `user_id` BIGINT NOT NULL,
-  `related_consultation_id` BIGINT NULL,
-  `question_text` TEXT NOT NULL,
-  `answer_text` TEXT NULL,
-  `references_json` TEXT NULL,
-  `risk_hint` VARCHAR(255) NULL,
-  `answer_status` VARCHAR(20) NOT NULL DEFAULT 'SUCCESS',
-  `model_name` VARCHAR(100) NULL,
-  `fail_reason` VARCHAR(255) NULL,
-  `created_at` DATETIME NOT NULL,
-  CONSTRAINT `fk_qa_records_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
-  CONSTRAINT `fk_qa_records_related_consultation_id` FOREIGN KEY (`related_consultation_id`) REFERENCES `consultations` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE `knowledge_documents` (
-  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-  `doc_title` VARCHAR(255) NOT NULL,
-  `category` VARCHAR(100) NULL,
-  `tag_list` VARCHAR(255) NULL,
-  `source_type` VARCHAR(50) NULL,
-  `source_name` VARCHAR(255) NULL,
-  `summary` TEXT NULL,
-  `file_url` VARCHAR(500) NULL,
-  `parse_status` VARCHAR(20) NOT NULL DEFAULT 'UPLOADED',
-  `chunk_count` INT NOT NULL DEFAULT 0,
-  `enabled_flag` INT NOT NULL DEFAULT 0,
-  `uploaded_by` BIGINT NULL,
+  `title` VARCHAR(120) NOT NULL,
   `created_at` DATETIME NOT NULL,
   `updated_at` DATETIME NOT NULL,
-  CONSTRAINT `fk_knowledge_documents_uploaded_by` FOREIGN KEY (`uploaded_by`) REFERENCES `users` (`id`)
+  CONSTRAINT `fk_chat_sessions_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE `knowledge_chunks_metadata` (
+CREATE TABLE `chat_messages` (
   `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
-  `document_id` BIGINT NOT NULL,
-  `chunk_no` INT NOT NULL,
-  `chunk_text` TEXT NOT NULL,
-  `keywords` VARCHAR(255) NULL,
-  `token_count` INT NULL,
-  `enabled_flag` INT NOT NULL DEFAULT 1,
+  `session_id` BIGINT NOT NULL,
+  `user_id` BIGINT NOT NULL,
+  `role` VARCHAR(20) NOT NULL,
+  `content` TEXT NOT NULL,
+  `intent` VARCHAR(30) NULL,
+  `used_tool` INT NOT NULL DEFAULT 0,
+  `tool_name` VARCHAR(50) NULL,
+  `sources_json` TEXT NULL,
+  `model_name` VARCHAR(100) NULL,
   `created_at` DATETIME NOT NULL,
-  CONSTRAINT `fk_knowledge_chunks_metadata_document_id` FOREIGN KEY (`document_id`) REFERENCES `knowledge_documents` (`id`)
+  CONSTRAINT `fk_chat_messages_session_id` FOREIGN KEY (`session_id`) REFERENCES `chat_sessions` (`id`),
+  CONSTRAINT `fk_chat_messages_user_id` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `tool_call_logs` (
+  `id` BIGINT PRIMARY KEY AUTO_INCREMENT,
+  `session_id` BIGINT NOT NULL,
+  `message_id` BIGINT NULL,
+  `tool_name` VARCHAR(50) NOT NULL,
+  `query` TEXT NOT NULL,
+  `result_json` TEXT NULL,
+  `latency_ms` INT NULL,
+  `success` INT NOT NULL DEFAULT 1,
+  `error_message` TEXT NULL,
+  `created_at` DATETIME NOT NULL,
+  CONSTRAINT `fk_tool_call_logs_session_id` FOREIGN KEY (`session_id`) REFERENCES `chat_sessions` (`id`),
+  CONSTRAINT `fk_tool_call_logs_message_id` FOREIGN KEY (`message_id`) REFERENCES `chat_messages` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE `system_configs` (

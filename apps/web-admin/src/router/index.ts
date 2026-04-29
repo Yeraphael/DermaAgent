@@ -5,7 +5,6 @@ import { useAuthStore } from '@/stores/auth'
 import AdminAnnouncementsView from '@/views/admin/AdminAnnouncementsView.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
 import AdminDoctorsView from '@/views/admin/AdminDoctorsView.vue'
-import AdminKnowledgeView from '@/views/admin/AdminKnowledgeView.vue'
 import AdminLogsView from '@/views/admin/AdminLogsView.vue'
 import AdminSettingsView from '@/views/admin/AdminSettingsView.vue'
 import AdminUsersView from '@/views/admin/AdminUsersView.vue'
@@ -62,7 +61,7 @@ const router = createRouter({
           component: AdminDashboardView,
           meta: {
             title: '控制台 / 数据看板',
-            subtitle: '统一展示核心运营指标、知识库流程、趋势曲线和运行日志，保持轻盈但专业的中台质感。',
+            subtitle: '统一展示核心运营指标、文本问答运行、趋势曲线和操作日志，保持轻盈但专业的中台质感。',
           },
         },
         {
@@ -79,14 +78,6 @@ const router = createRouter({
           meta: {
             title: '医生管理',
             subtitle: '审核、启停和擅长方向集中展示，弱化传统后台表格感，强化产品化管理体验。',
-          },
-        },
-        {
-          path: 'knowledge',
-          component: AdminKnowledgeView,
-          meta: {
-            title: '知识库管理',
-            subtitle: '上传、解析、切片、向量化和可检索状态统一可视化，方便演示和日常维护。',
           },
         },
         {

@@ -8,13 +8,26 @@ class LoginIn(BaseModel):
     password: str
 
 
+class VerificationCodeSendIn(BaseModel):
+    phone: str = Field(min_length=6, max_length=20)
+    scene: str = "REGISTER"
+
+
 class RegisterIn(BaseModel):
     username: str
+    verification_code: str | None = None
     password: str = Field(min_length=8)
     confirm_password: str = Field(min_length=8)
     phone: str | None = None
     email: str | None = None
     role_type: str = "USER"
+
+
+class PasswordResetIn(BaseModel):
+    phone: str = Field(min_length=6, max_length=20)
+    code: str = Field(min_length=4, max_length=8)
+    new_password: str = Field(min_length=8)
+    confirm_password: str = Field(min_length=8)
 
 
 class PasswordChangeIn(BaseModel):
@@ -66,9 +79,12 @@ class AnalyzeIn(BaseModel):
     force_reanalyze: bool = False
 
 
-class QuestionIn(BaseModel):
-    question: str
-    related_case_id: int | None = None
+class ChatSessionCreateIn(BaseModel):
+    title: str | None = Field(default=None, max_length=120)
+
+
+class ChatMessageCreateIn(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
 
 
 class DoctorReplyIn(BaseModel):
@@ -95,10 +111,6 @@ class AuditUpdateIn(BaseModel):
 
 class ConfigUpdateIn(BaseModel):
     config_value: str
-
-
-class KnowledgeStatusIn(BaseModel):
-    enabled_flag: int
 
 
 class AnnouncementIn(BaseModel):

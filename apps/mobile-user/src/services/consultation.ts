@@ -42,6 +42,15 @@ export type ConsultationDoctor = {
   title_name?: string | null
 }
 
+export type ConsultationMessage = {
+  message_id: number
+  sender_role: 'USER' | 'DOCTOR' | 'ADMIN'
+  sender_id?: number | null
+  message_type: string
+  content: string
+  created_at: string
+}
+
 export type ConsultationDetail = {
   case_id: number
   case_no: string
@@ -124,8 +133,28 @@ export async function fetchConsultationDetail(caseId: number) {
   return request<ConsultationDetail>(`/consultations/${caseId}`)
 }
 
+export async function fetchConsultationMessages(caseId: number) {
+  return request<ConsultationMessage[]>(`/consultations/${caseId}/messages`)
+}
+
+export async function sendConsultationMessage(caseId: number, content: string, messageType = 'TEXT') {
+  return request<{ message_id: number }>(`/consultations/${caseId}/messages`, {
+    method: 'POST',
+    data: {
+      message_type: messageType,
+      content,
+    },
+  })
+}
+
 export async function fetchMyConsultations(page = 1, pageSize = 10) {
   return request<ConsultationListResponse>(`/consultations/my?page=${page}&page_size=${pageSize}`)
+}
+
+export async function deleteConsultation(caseId: number) {
+  return request<{ case_id: number }>(`/consultations/${caseId}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function fetchUserNotifications(page = 1, pageSize = 10) {
@@ -134,14 +163,14 @@ export async function fetchUserNotifications(page = 1, pageSize = 10) {
 
 export function getConsultationStatusLabel(status?: string | null) {
   const labelMap: Record<string, string> = {
-    PENDING_AI: '智能生成中',
-    AI_DONE: '智能已完成',
-    WAIT_DOCTOR: '等待医生',
-    DOCTOR_REPLIED: '医生已回复',
-    CLOSED: '已关闭',
+    PENDING_AI: '待分析',
+    AI_DONE: '已完成分析',
+    WAIT_DOCTOR: '待医生回复',
+    DOCTOR_REPLIED: '已回复',
+    CLOSED: '已结束',
   }
 
-  return status ? labelMap[status] || status : '待处理'
+  return status ? labelMap[status] || status : '处理中'
 }
 
 export function getConsultationRiskLabel(risk?: string | null) {
@@ -158,8 +187,8 @@ export function splitTextSegments(value?: string | null) {
   if (!value) return []
 
   const normalized = value
-    .split(/\r?\n|；|;|。/g)
-    .map((item) => item.trim().replace(/^[\-\u2022\d.、\s]+/, ''))
+    .split(/\r?\n|[；;。]/)
+    .map((item) => item.trim().replace(/^[\-\u2022\d.\s]+/, ''))
     .filter(Boolean)
 
   return normalized.length ? normalized : [value.trim()]
@@ -168,6 +197,6 @@ export function splitTextSegments(value?: string | null) {
 export function notificationKind(notification: UserNotification) {
   const text = `${notification.title} ${notification.content}`.toLowerCase()
   if (text.includes('医生')) return 'DOCTOR'
-  if (text.includes('ai')) return 'AI'
+  if (text.includes('分析') || text.includes('风险')) return 'AI'
   return 'SYSTEM'
 }

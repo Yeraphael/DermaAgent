@@ -18,7 +18,7 @@ defineProps<{
     </div>
     <div class="brand-mark__copy">
       <strong>肤联智诊</strong>
-      <span>智能赋能 · 智护肌肤</span>
+      <span>智能问诊 · 智护肌肤</span>
     </div>
   </div>
 </template>

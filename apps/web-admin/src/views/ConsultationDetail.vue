@@ -182,7 +182,7 @@ onMounted(fetchDetail)
                 <el-input v-model="feedbackForm.correction_note" type="textarea" :rows="3" placeholder="补充 AI 判断偏差和修正意见" />
               </el-form-item>
               <el-form-item label="知识缺口">
-                <el-input v-model="feedbackForm.knowledge_gap_note" type="textarea" :rows="3" placeholder="补充后续知识库可增强的方向" />
+                <el-input v-model="feedbackForm.knowledge_gap_note" type="textarea" :rows="3" placeholder="补充后续模型或问答流程需要增强的方向" />
               </el-form-item>
               <el-button type="success" plain @click="submitFeedback">提交反馈</el-button>
             </el-form>

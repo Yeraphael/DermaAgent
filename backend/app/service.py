@@ -13,8 +13,6 @@ from app.model import (
     ConsultationReply,
     Doctor,
     HealthProfile,
-    KnowledgeChunkMetadata,
-    KnowledgeDocument,
     Notification,
     OperationLog,
     User,
@@ -295,32 +293,3 @@ def create_notification(
         )
     )
 
-
-def rebuild_document_chunks(db: Session, document: KnowledgeDocument) -> int:
-    existing = db.execute(select(KnowledgeChunkMetadata).where(KnowledgeChunkMetadata.document_id == document.id)).scalars().all()
-    for item in existing:
-        db.delete(item)
-
-    chunks = [
-        f"{document.doc_title} 提醒先识别诱因、发病部位，以及是否伴随瘙痒、疼痛、扩散等变化。",
-        f"{document.doc_title} 建议优先采用温和清洁、规律作息与减少刺激的基础护理策略。",
-        f"{document.doc_title} 如果出现渗液、发热、破溃或反复不缓解，应尽快线下就医。",
-        f"{document.doc_title} 就诊时建议携带近期照片、既往过敏史和用药情况，便于医生判断。",
-    ]
-
-    for index, text in enumerate(chunks, start=1):
-        db.add(
-            KnowledgeChunkMetadata(
-                document_id=document.id,
-                chunk_no=index,
-                chunk_text=text,
-                keywords="、".join(filter(None, [document.category or "", document.tag_list or "", document.doc_title])),
-                token_count=len(text),
-                enabled_flag=1,
-                created_at=datetime.utcnow(),
-            )
-        )
-
-    document.chunk_count = len(chunks)
-    document.updated_at = datetime.utcnow()
-    return len(chunks)

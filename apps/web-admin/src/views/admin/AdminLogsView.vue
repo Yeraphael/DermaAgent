@@ -19,7 +19,7 @@ onMounted(loadWorkspace)
   <template v-if="workspace">
     <section class="metric-grid">
       <MetricCard label="今日操作日志" :value="workspace.operationLogs.length" note="管理员、系统和医生动作统一留痕" accent="sky" />
-      <MetricCard label="模型调用记录" :value="workspace.modelLogs.length" note="图文问诊 / RAG / 回复辅助一体化观察" accent="mint" />
+      <MetricCard label="模型调用记录" :value="workspace.modelLogs.length" note="图文问诊 / 文本直答 / 联网搜索统一观察" accent="mint" />
       <MetricCard label="成功率" value="96.3%" note="重试、失败和成功都可追踪" accent="violet" />
       <MetricCard label="平均响应" value="1.95s" note="服务端时延监控留出后续接真接口空间" accent="lilac" />
     </section>

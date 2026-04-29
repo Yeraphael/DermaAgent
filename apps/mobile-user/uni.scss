@@ -1,84 +1,100 @@
-$bg-deep: #071522;
-$bg-soft: #10243b;
-$card-bg: rgba(15, 31, 48, 0.82);
-$card-border: rgba(184, 220, 255, 0.14);
-$accent: #59e4c2;
-$accent-blue: #82b9ff;
-$text-main: #f3f8ff;
-$text-sub: #90a9c6;
+$page-bg-start: #f7fbff;
+$page-bg-mid: #f1f7ff;
+$page-bg-end: #edf4ff;
+$card-bg: rgba(255, 255, 255, 0.96);
+$card-border: rgba(166, 187, 224, 0.42);
+$text-main: #17345f;
+$text-strong: #15326a;
+$text-sub: #5a7298;
+$text-faint: #7a8fb3;
+$blue: #2f7dff;
+$cyan: #18c8be;
+$mint: #18b88d;
+$amber: #f29c38;
+$rose: #ef5b6d;
 
 page {
-  background:
-    radial-gradient(circle at top left, rgba(43, 177, 160, 0.22), transparent 30%),
-    radial-gradient(circle at top right, rgba(77, 125, 255, 0.2), transparent 24%),
-    linear-gradient(180deg, #071522 0%, #0b1d30 54%, #07111b 100%);
-  color: $text-main;
   min-height: 100%;
+  color: $text-main;
+  background:
+    radial-gradient(circle at top left, rgba(198, 226, 255, 0.72), transparent 28%),
+    radial-gradient(circle at top right, rgba(224, 217, 255, 0.62), transparent 24%),
+    radial-gradient(circle at 90% 100%, rgba(200, 244, 236, 0.52), transparent 30%),
+    linear-gradient(180deg, $page-bg-start 0%, $page-bg-mid 48%, $page-bg-end 100%);
   font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
 }
 
 .page-wrap {
   min-height: 100vh;
-  padding: 24rpx 28rpx 180rpx;
+  padding: 28rpx 28rpx 180rpx;
 }
 
 .safe-top {
   padding-top: calc(var(--status-bar-height) + 18rpx);
 }
 
-.glass-card {
+.surface-card {
   border: 1px solid $card-border;
   border-radius: 34rpx;
-  background: linear-gradient(180deg, rgba(18, 35, 54, 0.86), rgba(8, 19, 31, 0.74));
-  box-shadow: 0 22rpx 70rpx rgba(2, 8, 16, 0.36);
-  backdrop-filter: blur(28rpx);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.96));
+  box-shadow: 0 22rpx 70rpx rgba(115, 143, 198, 0.14);
 }
 
 .section-title {
-  font-size: 40rpx;
+  color: $text-strong;
+  font-size: 42rpx;
   font-weight: 700;
+  line-height: 1.3;
 }
 
 .section-subtitle {
   margin-top: 12rpx;
   color: $text-sub;
-  font-size: 24rpx;
-  line-height: 1.7;
-}
-
-.primary-btn {
-  height: 96rpx;
-  line-height: 96rpx;
-  border-radius: 30rpx;
-  text-align: center;
-  font-weight: 700;
-  color: #04212a;
-  background: linear-gradient(135deg, #2cbca6, #68e0cc);
-}
-
-.outline-btn {
-  height: 88rpx;
-  line-height: 88rpx;
-  border-radius: 28rpx;
-  text-align: center;
-  color: $text-main;
-  border: 1px solid $card-border;
-  background: rgba(9, 19, 31, 0.66);
+  font-size: 26rpx;
+  line-height: 1.8;
 }
 
 .label {
-  color: $text-sub;
+  color: $text-faint;
   font-size: 24rpx;
+}
+
+.primary-btn,
+.secondary-btn,
+.text-btn {
+  min-height: 88rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.primary-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #2879ff, #5097ff 42%, #1cc9c2);
+}
+
+.secondary-btn {
+  color: $text-main;
+  border: 1px solid $card-border;
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.text-btn {
+  min-height: auto;
+  color: $blue;
 }
 
 .input-box,
 .textarea-box,
 .picker-box {
   width: 100%;
-  border-radius: 26rpx;
-  padding: 26rpx;
-  border: 1px solid rgba(184, 220, 255, 0.12);
-  background: rgba(8, 18, 30, 0.68);
+  border: 1px solid $card-border;
+  border-radius: 28rpx;
+  padding: 24rpx;
+  background: rgba(248, 250, 255, 0.98);
   color: $text-main;
   font-size: 28rpx;
 }
@@ -86,15 +102,36 @@ page {
 .chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 16rpx;
+  gap: 14rpx;
 }
 
-.chip {
-  padding: 14rpx 22rpx;
+.chip,
+.status-chip {
+  padding: 12rpx 20rpx;
   border-radius: 999rpx;
-  background: rgba(89, 228, 194, 0.12);
-  color: #d6fff5;
+  background: rgba(47, 125, 255, 0.1);
+  color: $blue;
   font-size: 24rpx;
+}
+
+.status-chip.mint {
+  background: rgba(24, 184, 141, 0.12);
+  color: $mint;
+}
+
+.status-chip.amber {
+  background: rgba(242, 156, 56, 0.14);
+  color: $amber;
+}
+
+.status-chip.rose {
+  background: rgba(239, 91, 109, 0.14);
+  color: $rose;
+}
+
+.status-chip.slate {
+  background: rgba(90, 114, 152, 0.12);
+  color: $text-sub;
 }
 
 .stat-grid {
@@ -103,14 +140,16 @@ page {
   gap: 18rpx;
 }
 
-.stat-item {
+.stat-card {
   padding: 24rpx;
   border-radius: 28rpx;
-  background: rgba(9, 19, 31, 0.72);
+  border: 1px solid $card-border;
+  background: rgba(248, 250, 255, 0.98);
 }
 
-.stat-item .num {
+.stat-card .num {
   margin-top: 10rpx;
-  font-size: 46rpx;
+  color: $text-strong;
+  font-size: 40rpx;
   font-weight: 700;
 }

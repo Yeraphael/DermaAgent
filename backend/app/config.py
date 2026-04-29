@@ -32,10 +32,13 @@ class Settings(BaseSettings):
     qwen_base_url: str | None = None
     qwen_visual_model: str = "qwen-vl-plus"
     qwen_text_model: str = "qwen-plus"
-
-    rag_mode: str = "mock"
-    qdrant_url: str = "http://127.0.0.1:6333"
-    qdrant_collection: str = "derma_knowledge"
+    text_qa_model: str = "qwen-plus"
+    tavily_api_key: str | None = None
+    tavily_enabled: bool = False
+    chat_history_limit: int = 10
+    chat_temperature: float = 0.2
+    chat_max_tokens: int = 1200
+    chat_timeout_seconds: int = 30
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),

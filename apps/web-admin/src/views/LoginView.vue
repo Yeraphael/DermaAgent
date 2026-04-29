@@ -27,7 +27,7 @@ const presets = [
     label: '管理员体验',
     username: 'admin01',
     password: '12345678',
-    copy: '进入运营中台，管理用户、医生、知识库和系统配置。',
+    copy: '进入运营中台，管理用户、医生、文本问答运行和系统配置。',
   },
 ]
 
@@ -64,7 +64,7 @@ function usePreset(username: string, password: string) {
 
         <div class="login-hero__grid">
           <MetricCard label="医生端" value="3 核心工作流" note="工作台 / 问诊管理 / 患者档案" accent="violet" />
-          <MetricCard label="管理端" value="7 运营模块" note="用户、医生、知识库、配置、日志与公告" accent="sky" />
+          <MetricCard label="管理端" value="6 运营模块" note="用户、医生、问答运行、配置、日志与公告" accent="sky" />
           <MetricCard label="视觉系统" value="1 套统一 tokens" note="阴影、圆角、状态色、卡片与表单全量统一" accent="mint" />
         </div>
       </section>

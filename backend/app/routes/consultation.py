@@ -210,6 +210,30 @@ def consultation_detail(
     return response_envelope(request, build_consultation_detail(db, case, include_patient=user.role_type in {"DOCTOR", "ADMIN"}))
 
 
+@router.delete("/consultations/{case_id}")
+def delete_consultation(
+    case_id: int,
+    request: Request,
+    user: User = Depends(require_roles("USER")),
+    db: Session = Depends(get_db),
+) -> dict:
+    case = _ensure_case_access(db, case_id, user)
+    case.is_deleted = 1
+    case.updated_at = datetime.utcnow()
+    log_operation(
+        db,
+        user.id,
+        user.role_type,
+        "CONSULTATION",
+        "DELETE",
+        str(case.id),
+        f"删除问诊记录 {case.case_no}",
+        request.client.host if request.client else None,
+    )
+    db.commit()
+    return response_envelope(request, {"case_id": case.id}, "删除成功")
+
+
 @router.get("/consultations/{case_id}/messages")
 def consultation_messages(
     case_id: int,

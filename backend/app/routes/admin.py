@@ -1,38 +1,36 @@
 from __future__ import annotations
 
-import json
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.chat_store import ensure_chat_tables
 from app.db import get_db
 from app.middleware import response_envelope
 from app.model import (
     AIAnalysisRecord,
     Admin,
     Announcement,
+    ChatMessage,
+    ChatSession,
     Consultation,
     Doctor,
-    KnowledgeChunkMetadata,
-    KnowledgeDocument,
     OperationLog,
-    QARecord,
     StatisticsSnapshot,
     SystemConfig,
+    ToolCallLog,
     User,
     UserProfile,
 )
 from app.routes.deps import require_roles
-from app.schema import AnnouncementIn, AuditUpdateIn, ConfigUpdateIn, KnowledgeStatusIn, StatusUpdateIn
-from app.service import build_consultation_detail, log_operation, rebuild_document_chunks, serialize_account, serialize_profile
+from app.schema import AnnouncementIn, AuditUpdateIn, ConfigUpdateIn, StatusUpdateIn
+from app.service import build_consultation_detail, log_operation, serialize_account, serialize_profile
 
 
 router = APIRouter()
-settings = get_settings()
 
 
 def _current_admin(user: User, db: Session) -> Admin:
@@ -40,16 +38,6 @@ def _current_admin(user: User, db: Session) -> Admin:
     if not admin:
         raise HTTPException(status_code=404, detail="管理员资料不存在")
     return admin
-
-
-def _save_admin_file(file: UploadFile, folder: str) -> tuple[str, str]:
-    target_dir = settings.upload_path / folder
-    target_dir.mkdir(parents=True, exist_ok=True)
-    suffix = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else ""
-    filename = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{abs(hash(file.filename or 'file')) % 99999}{suffix}"
-    target_path = target_dir / filename
-    target_path.write_bytes(file.file.read())
-    return filename, f"{settings.base_url}/uploads/{folder}/{filename}"
 
 
 @router.get("/users")
@@ -300,191 +288,6 @@ def close_consultation(case_id: int, request: Request, user: User = Depends(requ
     return response_envelope(request, {"case_id": row.id, "status": row.status}, "处理完成")
 
 
-@router.post("/knowledge/documents/upload")
-async def upload_document(
-    request: Request,
-    title: str = Form(...),
-    category: str = Form(default="皮肤疾病"),
-    tag_list: str = Form(default=""),
-    summary: str = Form(default=""),
-    file: UploadFile | None = File(default=None),
-    user: User = Depends(require_roles("ADMIN")),
-    db: Session = Depends(get_db),
-) -> dict:
-    _current_admin(user, db)
-    file_url = None
-    source_name = "manual-entry"
-    if file:
-        _, file_url = _save_admin_file(file, "knowledge")
-        source_name = file.filename or "uploaded-file"
-    document = KnowledgeDocument(
-        doc_title=title,
-        category=category,
-        tag_list=tag_list,
-        source_type="UPLOAD" if file else "MANUAL",
-        source_name=source_name,
-        summary=summary,
-        file_url=file_url,
-        parse_status="UPLOADED",
-        chunk_count=0,
-        enabled_flag=0,
-        uploaded_by=user.id,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    db.add(document)
-    log_operation(db, user.id, user.role_type, "KNOWLEDGE", "UPLOAD", str(document.id or ""), f"上传知识文档 {title}", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(request, {"document_id": document.id, "title": document.doc_title}, "文档已入库")
-
-
-@router.get("/knowledge/documents")
-def knowledge_documents(
-    request: Request,
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=10, ge=1, le=50),
-    keyword: str | None = Query(default=None),
-    user: User = Depends(require_roles("ADMIN")),
-    db: Session = Depends(get_db),
-) -> dict:
-    _current_admin(user, db)
-    rows = db.execute(select(KnowledgeDocument).order_by(KnowledgeDocument.created_at.desc())).scalars().all()
-    if keyword:
-        rows = [row for row in rows if keyword.lower() in f"{row.doc_title} {row.category or ''} {row.tag_list or ''}".lower()]
-    start = (page - 1) * page_size
-    items = rows[start : start + page_size]
-    return response_envelope(
-        request,
-        {
-            "list": [
-                {
-                    "document_id": row.id,
-                    "doc_title": row.doc_title,
-                    "category": row.category,
-                    "tag_list": row.tag_list,
-                    "summary": row.summary,
-                    "source_type": row.source_type,
-                    "source_name": row.source_name,
-                    "parse_status": row.parse_status,
-                    "chunk_count": row.chunk_count,
-                    "enabled_flag": row.enabled_flag,
-                    "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for row in items
-            ],
-            "total": len(rows),
-            "page": page,
-            "page_size": page_size,
-        },
-    )
-
-
-@router.get("/knowledge/documents/{document_id}")
-def knowledge_document_detail(document_id: int, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
-    _current_admin(user, db)
-    row = db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id == document_id))
-    if not row:
-        raise HTTPException(status_code=404, detail="知识文档不存在")
-    return response_envelope(
-        request,
-        {
-            "document_id": row.id,
-            "doc_title": row.doc_title,
-            "category": row.category,
-            "tag_list": row.tag_list,
-            "summary": row.summary,
-            "file_url": row.file_url,
-            "source_type": row.source_type,
-            "source_name": row.source_name,
-            "parse_status": row.parse_status,
-            "chunk_count": row.chunk_count,
-            "enabled_flag": row.enabled_flag,
-            "updated_at": row.updated_at.strftime("%Y-%m-%d %H:%M:%S"),
-        },
-    )
-
-
-@router.post("/knowledge/documents/{document_id}/parse")
-def parse_document(document_id: int, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
-    _current_admin(user, db)
-    row = db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id == document_id))
-    if not row:
-        raise HTTPException(status_code=404, detail="知识文档不存在")
-    row.parse_status = "PARSED"
-    row.updated_at = datetime.utcnow()
-    log_operation(db, user.id, user.role_type, "KNOWLEDGE", "PARSE", str(row.id), f"解析知识文档 {row.doc_title}", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(request, {"document_id": row.id, "parse_status": row.parse_status}, "解析完成")
-
-
-@router.post("/knowledge/documents/{document_id}/chunk")
-def chunk_document(document_id: int, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
-    _current_admin(user, db)
-    row = db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id == document_id))
-    if not row:
-        raise HTTPException(status_code=404, detail="知识文档不存在")
-    count = rebuild_document_chunks(db, row)
-    row.parse_status = "CHUNKED"
-    row.updated_at = datetime.utcnow()
-    log_operation(db, user.id, user.role_type, "KNOWLEDGE", "CHUNK", str(row.id), f"切分知识文档 {row.doc_title}", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(request, {"document_id": row.id, "chunk_count": count, "parse_status": row.parse_status}, "切分完成")
-
-
-@router.post("/knowledge/documents/{document_id}/embed")
-def embed_document(document_id: int, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
-    _current_admin(user, db)
-    row = db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id == document_id))
-    if not row:
-        raise HTTPException(status_code=404, detail="知识文档不存在")
-    row.parse_status = "EMBEDDED"
-    row.enabled_flag = 1
-    row.updated_at = datetime.utcnow()
-    log_operation(db, user.id, user.role_type, "KNOWLEDGE", "EMBED", str(row.id), f"嵌入知识文档 {row.doc_title}", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(request, {"document_id": row.id, "parse_status": row.parse_status, "enabled_flag": row.enabled_flag}, "向量化状态已更新")
-
-
-@router.put("/knowledge/documents/{document_id}/status")
-def knowledge_status(
-    document_id: int,
-    payload: KnowledgeStatusIn,
-    request: Request,
-    user: User = Depends(require_roles("ADMIN")),
-    db: Session = Depends(get_db),
-) -> dict:
-    _current_admin(user, db)
-    row = db.scalar(select(KnowledgeDocument).where(KnowledgeDocument.id == document_id))
-    if not row:
-        raise HTTPException(status_code=404, detail="知识文档不存在")
-    row.enabled_flag = payload.enabled_flag
-    row.parse_status = "ENABLED" if payload.enabled_flag == 1 else "DISABLED"
-    row.updated_at = datetime.utcnow()
-    log_operation(db, user.id, user.role_type, "KNOWLEDGE", "ENABLE", str(row.id), f"知识文档启用状态 {payload.enabled_flag}", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(request, {"document_id": row.id, "enabled_flag": row.enabled_flag, "parse_status": row.parse_status}, "状态已更新")
-
-
-@router.get("/knowledge/documents/{document_id}/chunks")
-def knowledge_chunks(document_id: int, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
-    _current_admin(user, db)
-    rows = db.execute(select(KnowledgeChunkMetadata).where(KnowledgeChunkMetadata.document_id == document_id).order_by(KnowledgeChunkMetadata.chunk_no.asc())).scalars().all()
-    return response_envelope(
-        request,
-        [
-            {
-                "chunk_id": row.id,
-                "chunk_no": row.chunk_no,
-                "chunk_text": row.chunk_text,
-                "keywords": row.keywords,
-                "token_count": row.token_count,
-                "enabled_flag": row.enabled_flag,
-            }
-            for row in rows
-        ],
-    )
-
-
 @router.get("/configs")
 def configs(request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
     _current_admin(user, db)
@@ -587,11 +390,13 @@ def delete_announcement(announcement_id: int, request: Request, user: User = Dep
 @router.get("/stats/overview")
 def stats_overview(request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
     _current_admin(user, db)
+    ensure_chat_tables(db)
     users_total = len(db.execute(select(User).where(User.role_type == "USER", User.is_deleted == 0)).scalars().all())
     doctors_total = len(db.execute(select(Doctor)).scalars().all())
     cases = db.execute(select(Consultation).where(Consultation.is_deleted == 0)).scalars().all()
-    docs_total = len(db.execute(select(KnowledgeDocument)).scalars().all())
-    qa_total = len(db.execute(select(QARecord)).scalars().all())
+    chat_sessions_total = len(db.execute(select(ChatSession)).scalars().all())
+    chat_messages_total = len(db.execute(select(ChatMessage).where(ChatMessage.role == "assistant")).scalars().all())
+    web_search_total = len(db.execute(select(ToolCallLog).where(ToolCallLog.tool_name == "tavily")).scalars().all())
     return response_envelope(
         request,
         {
@@ -600,8 +405,9 @@ def stats_overview(request: Request, user: User = Depends(require_roles("ADMIN")
             "consultations_total": len(cases),
             "high_risk_total": len([row for row in cases if row.risk_level == "HIGH"]),
             "pending_doctor_total": len([row for row in cases if row.status == "WAIT_DOCTOR"]),
-            "knowledge_total": docs_total,
-            "qa_total": qa_total,
+            "chat_sessions_total": chat_sessions_total,
+            "chat_messages_total": chat_messages_total,
+            "web_search_total": web_search_total,
         },
     )
 
@@ -626,11 +432,20 @@ def consultation_trend(request: Request, user: User = Depends(require_roles("ADM
 @router.get("/stats/hot-questions")
 def hot_questions(request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
     _current_admin(user, db)
-    rows = db.execute(select(QARecord).order_by(QARecord.created_at.desc())).scalars().all()
+    ensure_chat_tables(db)
+    rows = (
+        db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.role == "user")
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+        )
+        .scalars()
+        .all()
+    )
     counter: Counter[str] = Counter()
     latest_time: dict[str, str] = {}
     for row in rows:
-        key = row.question_text[:18]
+        key = row.content[:18]
         counter[key] += 1
         latest_time[key] = row.created_at.strftime("%Y-%m-%d %H:%M:%S")
     return response_envelope(
@@ -701,8 +516,22 @@ def error_logs(request: Request, user: User = Depends(require_roles("ADMIN")), d
 @router.get("/logs/model-calls")
 def model_call_logs(request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)) -> dict:
     _current_admin(user, db)
+    ensure_chat_tables(db)
     ai_rows = db.execute(select(AIAnalysisRecord).order_by(AIAnalysisRecord.created_at.desc())).scalars().all()
-    qa_rows = db.execute(select(QARecord).order_by(QARecord.created_at.desc())).scalars().all()
+    chat_rows = (
+        db.execute(
+            select(ChatMessage)
+            .where(ChatMessage.role == "assistant")
+            .order_by(ChatMessage.created_at.desc(), ChatMessage.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+    tool_logs = {
+        row.message_id: row
+        for row in db.execute(select(ToolCallLog).order_by(ToolCallLog.created_at.desc(), ToolCallLog.id.desc())).scalars().all()
+        if row.message_id
+    }
     data = [
         {
             "biz_type": "AI_ANALYSIS",
@@ -715,14 +544,14 @@ def model_call_logs(request: Request, user: User = Depends(require_roles("ADMIN"
         for row in ai_rows[:40]
     ] + [
         {
-            "biz_type": "RAG_QA",
+            "biz_type": "TEXT_QA_WEB" if tool_logs.get(row.id) else "TEXT_QA_DIRECT",
             "record_id": row.id,
             "model_name": row.model_name,
-            "status": row.answer_status,
-            "summary": row.question_text[:60],
+            "status": "FAILED" if tool_logs.get(row.id) and not tool_logs[row.id].success else "SUCCESS",
+            "summary": row.content[:60],
             "created_at": row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
-        for row in qa_rows[:40]
+        for row in chat_rows[:40]
     ]
     data.sort(key=lambda item: item["created_at"], reverse=True)
     return response_envelope(request, data[:80])

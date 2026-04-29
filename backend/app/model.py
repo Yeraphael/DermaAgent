@@ -175,51 +175,44 @@ class ConsultationReply(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class QARecord(Base):
-    __tablename__ = "qa_records"
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
-    related_consultation_id: Mapped[int | None] = mapped_column(ForeignKey("consultations.id"))
-    question_text: Mapped[str] = mapped_column(Text, nullable=False)
-    answer_text: Mapped[str | None] = mapped_column(Text)
-    references_json: Mapped[str | None] = mapped_column(Text)
-    risk_hint: Mapped[str | None] = mapped_column(String(255))
-    answer_status: Mapped[str] = mapped_column(String(20), default="SUCCESS")
-    model_name: Mapped[str | None] = mapped_column(String(100))
-    fail_reason: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-
-
-class KnowledgeDocument(Base):
-    __tablename__ = "knowledge_documents"
-
-    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    doc_title: Mapped[str] = mapped_column(String(255), nullable=False)
-    category: Mapped[str | None] = mapped_column(String(100))
-    tag_list: Mapped[str | None] = mapped_column(String(255))
-    source_type: Mapped[str | None] = mapped_column(String(50))
-    source_name: Mapped[str | None] = mapped_column(String(255))
-    summary: Mapped[str | None] = mapped_column(Text)
-    file_url: Mapped[str | None] = mapped_column(String(500))
-    parse_status: Mapped[str] = mapped_column(String(20), default="UPLOADED")
-    chunk_count: Mapped[int] = mapped_column(Integer, default=0)
-    enabled_flag: Mapped[int] = mapped_column(Integer, default=0)
-    uploaded_by: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
+    title: Mapped[str] = mapped_column(String(120), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 
-class KnowledgeChunkMetadata(Base):
-    __tablename__ = "knowledge_chunks_metadata"
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    document_id: Mapped[int] = mapped_column(ForeignKey("knowledge_documents.id"), nullable=False)
-    chunk_no: Mapped[int] = mapped_column(Integer, nullable=False)
-    chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
-    keywords: Mapped[str | None] = mapped_column(String(255))
-    token_count: Mapped[int | None] = mapped_column(Integer)
-    enabled_flag: Mapped[int] = mapped_column(Integer, default=1)
+    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id"), nullable=False)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    intent: Mapped[str | None] = mapped_column(String(30))
+    used_tool: Mapped[int] = mapped_column(Integer, default=0)
+    tool_name: Mapped[str | None] = mapped_column(String(50))
+    sources_json: Mapped[str | None] = mapped_column(Text)
+    model_name: Mapped[str | None] = mapped_column(String(100))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ToolCallLog(Base):
+    __tablename__ = "tool_call_logs"
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    session_id: Mapped[int] = mapped_column(ForeignKey("chat_sessions.id"), nullable=False)
+    message_id: Mapped[int | None] = mapped_column(ForeignKey("chat_messages.id"))
+    tool_name: Mapped[str] = mapped_column(String(50), nullable=False)
+    query: Mapped[str] = mapped_column(Text, nullable=False)
+    result_json: Mapped[str | None] = mapped_column(Text)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    success: Mapped[int] = mapped_column(Integer, default=1)
+    error_message: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
 

@@ -2,17 +2,15 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db import get_db
 from app.middleware import response_envelope
-from app.model import Announcement, QARecord, User
-from app.rag import rag_engine
+from app.model import Announcement, User
 from app.routes.deps import get_current_user
-from app.schema import QuestionIn
 from app.service import log_operation
 
 
@@ -99,93 +97,3 @@ async def upload_image(
         "上传成功",
     )
 
-
-@router.post("/rag/qa")
-def ask_question(
-    payload: QuestionIn,
-    request: Request,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    answer, refs, risk_hint = rag_engine.answer(db, payload.question)
-    record = QARecord(
-        user_id=user.id,
-        related_consultation_id=payload.related_case_id,
-        question_text=payload.question,
-        answer_text=answer,
-        references_json=rag_engine.dump_refs(refs),
-        risk_hint=risk_hint,
-        answer_status="SUCCESS",
-        model_name="mock-rag" if settings.rag_mode.lower() == "mock" else settings.qwen_text_model,
-        created_at=datetime.utcnow(),
-    )
-    db.add(record)
-    log_operation(db, user.id, user.role_type, "RAG", "QA", str(record.id or ""), "提交知识问答", request.client.host if request.client else None)
-    db.commit()
-    return response_envelope(
-        request,
-        {
-            "qa_id": record.id,
-            "question": payload.question,
-            "answer": answer,
-            "references": refs,
-            "risk_hint": risk_hint,
-            "mode": settings.rag_mode,
-        },
-        "回答成功",
-    )
-
-
-@router.get("/rag/qa/history")
-def qa_history(
-    request: Request,
-    page: int = Query(default=1, ge=1),
-    page_size: int = Query(default=10, ge=1, le=50),
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    rows = db.execute(select(QARecord).where(QARecord.user_id == user.id).order_by(QARecord.created_at.desc())).scalars().all()
-    start = (page - 1) * page_size
-    items = rows[start : start + page_size]
-    return response_envelope(
-        request,
-        {
-            "list": [
-                {
-                    "qa_id": row.id,
-                    "question": row.question_text,
-                    "answer": row.answer_text,
-                    "risk_hint": row.risk_hint,
-                    "created_at": row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-                }
-                for row in items
-            ],
-            "total": len(rows),
-            "page": page,
-            "page_size": page_size,
-        },
-    )
-
-
-@router.get("/rag/qa/{qa_id}")
-def qa_detail(
-    qa_id: int,
-    request: Request,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-) -> dict:
-    row = db.scalar(select(QARecord).where(QARecord.id == qa_id, QARecord.user_id == user.id))
-    if not row:
-        raise HTTPException(status_code=404, detail="记录不存在")
-    return response_envelope(
-        request,
-        {
-            "qa_id": row.id,
-            "question": row.question_text,
-            "answer": row.answer_text,
-            "references": row.references_json,
-            "risk_hint": row.risk_hint,
-            "status": row.answer_status,
-            "created_at": row.created_at.strftime("%Y-%m-%d %H:%M:%S"),
-        },
-    )

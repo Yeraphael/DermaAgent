@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+import re
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import func, select
@@ -24,6 +25,13 @@ from app.service import (
 
 
 router = APIRouter()
+
+
+def _split_segments(value: str | None) -> list[str]:
+    if not value:
+        return []
+    parts = [item.strip("•- 0123456789.") for item in re.split(r"[\r\n；;。]", value) if item.strip()]
+    return [item for item in parts if item]
 
 
 @router.get("/profile")
@@ -179,6 +187,104 @@ def user_dashboard(request: Request, user: User = Depends(require_roles("USER"))
             if active
             else None,
             "recent_cases": recent,
+        },
+    )
+
+
+@router.get("/health-archive")
+def health_archive(request: Request, user: User = Depends(require_roles("USER")), db: Session = Depends(get_db)) -> dict:
+    profile, health = ensure_user_profile(db, user.id)
+    cases = (
+        db.execute(
+            select(Consultation)
+            .where(Consultation.user_id == user.id, Consultation.is_deleted == 0)
+            .order_by(Consultation.created_at.desc(), Consultation.id.desc())
+        )
+        .scalars()
+        .all()
+    )
+
+    now = datetime.utcnow()
+    recent_30 = [case for case in cases if case.submitted_at and case.submitted_at >= now - timedelta(days=30)]
+    recent_90 = [case for case in cases if case.submitted_at and case.submitted_at >= now - timedelta(days=90)]
+    risk_cases = recent_90 or cases
+
+    risk_counts = {
+        "LOW": len([case for case in risk_cases if case.risk_level == "LOW"]),
+        "MEDIUM": len([case for case in risk_cases if case.risk_level == "MEDIUM"]),
+        "HIGH": len([case for case in risk_cases if case.risk_level == "HIGH"]),
+    }
+    risk_total = sum(risk_counts.values())
+
+    def build_risk_entry(level: str, label: str) -> dict:
+        count = risk_counts[level]
+        percentage = round((count / risk_total) * 100) if risk_total else 0
+        days = round((percentage / 100) * 90) if percentage else 0
+        return {
+            "level": level,
+            "label": label,
+            "percentage": percentage,
+            "days": days,
+            "count": count,
+        }
+
+    replies_total = len([case for case in cases if latest_reply(db, case.id)])
+    recent_reply_total = len([case for case in recent_30 if latest_reply(db, case.id)])
+
+    advice_items: list[str] = []
+    for case in cases[:8]:
+        ai_record = latest_ai(db, case.id)
+        for segment in _split_segments(ai_record.care_advice if ai_record else None):
+            if segment not in advice_items:
+                advice_items.append(segment)
+        if len(advice_items) >= 4:
+            break
+
+    recent_cases = []
+    for case in cases[:3]:
+        recent_cases.append(
+            {
+                "case_id": case.id,
+                "case_no": case.case_no,
+                "title": case.summary_title or "皮肤健康记录",
+                "submitted_at": case.submitted_at.strftime("%Y-%m-%d") if case.submitted_at else None,
+                "status": case.status,
+                "risk_level": case.risk_level,
+            }
+        )
+
+    return response_envelope(
+        request,
+        {
+            "stats": {
+                "skin_type": health.skin_type or "未完善",
+                "skin_type_updated_at": health.updated_at.strftime("%Y-%m-%d") if health and health.updated_at else None,
+                "consultations_30d": len(recent_30),
+                "consultations_30d_delta": 0,
+                "doctor_replies_total": replies_total,
+                "doctor_replies_30d": recent_reply_total,
+                "care_plan_status": "已建立" if advice_items else "待补充",
+                "care_plan_updated_at": health.updated_at.strftime("%Y-%m-%d") if health and health.updated_at else None,
+            },
+            "basic_info": {
+                "real_name": profile.real_name or "",
+                "gender": profile.gender or "",
+                "age": profile.age,
+                "phone": user.phone or "",
+                "skin_type": health.skin_type or "",
+            },
+            "risk_trend": [
+                build_risk_entry("LOW", "低风险"),
+                build_risk_entry("MEDIUM", "中风险"),
+                build_risk_entry("HIGH", "高风险"),
+            ],
+            "recent_cases": recent_cases,
+            "care_suggestions": advice_items or [
+                "温和清洁",
+                "保湿维护",
+                "避免刺激",
+                "严格防晒",
+            ],
         },
     )
 

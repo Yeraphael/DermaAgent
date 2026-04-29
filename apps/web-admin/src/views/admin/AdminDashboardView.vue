@@ -1,13 +1,30 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 import MetricCard from '@/components/MetricCard.vue'
 import PanelCard from '@/components/PanelCard.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import TrendChart from '@/components/TrendChart.vue'
-import { getAdminWorkspace, getStageLabel } from '@/data/controlCenter'
+import { getAdminWorkspace } from '@/data/controlCenter'
 
 const workspace = ref<Awaited<ReturnType<typeof getAdminWorkspace>> | null>(null)
+
+const qaInsights = computed(() => {
+  if (!workspace.value) {
+    return {
+      direct: 0,
+      web: 0,
+      failed: 0,
+    }
+  }
+
+  const modelLogs = workspace.value.modelLogs
+  return {
+    direct: modelLogs.filter((item) => item.biz_type === '文本直答').length,
+    web: modelLogs.filter((item) => item.biz_type === '联网搜索问答').length,
+    failed: modelLogs.filter((item) => item.status === 'FAILED').length,
+  }
+})
 
 async function loadWorkspace() {
   workspace.value = await getAdminWorkspace()
@@ -30,37 +47,32 @@ onMounted(loadWorkspace)
     </section>
 
     <section class="split-grid">
-      <PanelCard title="知识库流程总览" subtitle="上传 → 解析 → 切片 → 向量化 → 可检索，整个流程需要清晰高级而不拥挤。">
+      <PanelCard title="文本问答运行总览" subtitle="只保留轻量路由、直接回答、联网搜索和历史沉淀，后台也按这条主线观察。">
         <div class="process-flow">
           <article class="flow-step">
             <div class="eyebrow-pill">01</div>
-            <strong>上传</strong>
-            <span>{{ workspace.knowledgeDocuments.filter((item) => item.stage === 'UPLOADED').length }} 份待处理</span>
+            <strong>会话沉淀</strong>
+            <span>{{ workspace.consultations.length + qaInsights.direct + qaInsights.web }} 条业务轨迹</span>
           </article>
           <article class="flow-step">
             <div class="eyebrow-pill">02</div>
-            <strong>解析</strong>
-            <span>{{ workspace.knowledgeDocuments.filter((item) => item.stage === 'PARSED').length }} 份处理中</span>
+            <strong>直接回答</strong>
+            <span>{{ qaInsights.direct }} 次稳定命中</span>
           </article>
           <article class="flow-step">
             <div class="eyebrow-pill">03</div>
-            <strong>切片</strong>
-            <span>{{ workspace.knowledgeDocuments.filter((item) => item.stage === 'CHUNKED').length }} 份已切片</span>
+            <strong>联网搜索</strong>
+            <span>{{ qaInsights.web }} 次调用 Tavily</span>
           </article>
           <article class="flow-step">
             <div class="eyebrow-pill">04</div>
-            <strong>向量化</strong>
-            <span>{{ workspace.knowledgeDocuments.filter((item) => item.stage === 'EMBEDDED').length }} 份待启用</span>
-          </article>
-          <article class="flow-step">
-            <div class="eyebrow-pill">05</div>
-            <strong>可检索</strong>
-            <span>{{ workspace.knowledgeDocuments.filter((item) => item.stage === 'ENABLED').length }} 份已上线</span>
+            <strong>异常兜底</strong>
+            <span>{{ qaInsights.failed }} 次需排查</span>
           </article>
         </div>
       </PanelCard>
 
-      <PanelCard title="系统配置快照" subtitle="Prompt 版本、医生复核开关和上传限制从工作台直接看全。">
+      <PanelCard title="系统配置快照" subtitle="模型、医生复核开关和上传限制从工作台直接看全。">
         <div class="key-value">
           <div v-for="item in workspace.configs" :key="item.config_key" class="key-value__row">
             <span>{{ item.title }}</span>
@@ -71,11 +83,11 @@ onMounted(loadWorkspace)
     </section>
 
     <section class="split-grid">
-      <PanelCard title="问诊趋势（近 7 天）" subtitle="数据运营感来自清晰的趋势表达，而不是堆满图表。">
+      <PanelCard title="问诊趋势（近 7 天）" subtitle="趋势图只保留最能说明业务状态的主线。">
         <TrendChart :points="workspace.trend" />
       </PanelCard>
 
-      <PanelCard title="最新操作日志" subtitle="把系统动作、知识库处理和审核动作沉淀到同一个运营视角。">
+      <PanelCard title="最新操作日志" subtitle="把会话、问诊、审核和系统动作放到同一个运营视角。">
         <div class="log-list">
           <article v-for="item in workspace.operationLogs.slice(0, 4)" :key="item.log_id" class="log-item">
             <strong>{{ item.module_name }} · {{ item.operation_type }}</strong>
@@ -105,16 +117,17 @@ onMounted(loadWorkspace)
         </div>
       </PanelCard>
 
-      <PanelCard title="知识文档状态" subtitle="文档状态用标签和流程状态一起呈现，更符合产品化后台气质。">
+      <PanelCard title="最近模型运行" subtitle="把图文分析、文本直答和联网搜索回答放到同一个观察面板。">
         <div class="list-panel">
-          <article v-for="item in workspace.knowledgeDocuments" :key="item.document_id" class="list-row">
+          <article v-for="item in workspace.modelLogs.slice(0, 5)" :key="item.log_id" class="list-row">
             <div class="list-row__head">
               <div>
-                <strong>{{ item.doc_title }}</strong>
-                <p class="list-row__summary">{{ item.file_type }} · {{ item.file_size }} · {{ item.uploaded_at }}</p>
+                <strong>{{ item.biz_type }}</strong>
+                <p class="list-row__summary">{{ item.model_name }} · {{ item.duration }} · {{ item.created_at }}</p>
               </div>
-              <StatusBadge :label="getStageLabel(item.stage)" tone="violet" />
+              <StatusBadge :label="item.status" :tone="item.status === 'SUCCESS' ? 'mint' : item.status === 'RETRY' ? 'amber' : 'rose'" />
             </div>
+            <p class="list-row__summary" style="margin-top: 12px;">{{ item.summary }}</p>
           </article>
         </div>
       </PanelCard>

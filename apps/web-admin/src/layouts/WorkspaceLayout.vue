@@ -19,7 +19,6 @@ const adminNav = [
   { label: '工作台', to: '/admin/dashboard' },
   { label: '用户管理', to: '/admin/users' },
   { label: '医生管理', to: '/admin/doctors' },
-  { label: '知识库管理', to: '/admin/knowledge' },
   { label: '系统配置', to: '/admin/settings' },
   { label: '日志统计', to: '/admin/logs' },
   { label: '公告管理', to: '/admin/announcements' },
@@ -52,8 +51,8 @@ function logout() {
 
       <div class="workspace-sidebar__assistant">
         <div class="workspace-sidebar__assistant-badge">AI 引擎运行中</div>
-        <strong>知识增强 · 风险预警 · 安全合规</strong>
-        <p>这一套后台页现在共用同一组卡片、徽标、阴影和交互节奏。</p>
+        <strong>文本问答 · 风险预警 · 安全合规</strong>
+        <p>这一套后台页现在围绕问诊协同和智能问答运行做统一治理，不再维护独立知识库问答入口。</p>
       </div>
     </aside>
 
@@ -66,7 +65,7 @@ function logout() {
         </div>
         <div class="workspace-topbar__actions">
           <div class="workspace-topbar__search">
-            <input type="text" placeholder="搜索菜单、病例号、知识文档…" />
+            <input type="text" placeholder="搜索菜单、病例号、会话标题…" />
           </div>
           <div class="workspace-topbar__profile">
             <img :src="auth.avatar" alt="avatar" />
