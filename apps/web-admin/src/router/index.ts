@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 import WorkspaceLayout from '@/layouts/WorkspaceLayout.vue'
 import { useAuthStore } from '@/stores/auth'
-import AdminAnnouncementsView from '@/views/admin/AdminAnnouncementsView.vue'
+import AdminConsultationsView from '@/views/admin/AdminConsultationsView.vue'
 import AdminDashboardView from '@/views/admin/AdminDashboardView.vue'
 import AdminDoctorsView from '@/views/admin/AdminDoctorsView.vue'
 import AdminLogsView from '@/views/admin/AdminLogsView.vue'
@@ -28,8 +28,8 @@ const router = createRouter({
           path: 'workbench',
           component: DoctorWorkbenchView,
           meta: {
-            title: '医生工作台',
-            subtitle: '高风险预警、待处理问诊、AI 反馈准确率和效率趋势都收敛到同一套清晰的工作视图里。',
+            title: '工作台',
+            subtitle: '集中查看待处理问诊、高风险提醒、今日处理效率和 AI 反馈表现。',
           },
         },
         {
@@ -37,15 +37,15 @@ const router = createRouter({
           component: DoctorConsultationsView,
           meta: {
             title: '问诊管理',
-            subtitle: '左侧病例列表、中间问诊详情、右侧医生回复与 AI 反馈保持统一的三栏协作结构。',
+            subtitle: '查看图文问诊、患者资料、AI 分析结果，并完成医生回复与结果反馈。',
           },
         },
         {
-          path: 'patients',
+          path: 'patients/:userId?',
           component: DoctorPatientsView,
           meta: {
-            title: '患者管理',
-            subtitle: '把健康档案、过敏史、生活习惯和历史病例整合到同一套可持续跟踪的患者视图里。',
+            title: '患者档案',
+            subtitle: '统一管理患者基础信息、健康标签、历史病例、风险趋势与长期护理建议。',
           },
         },
       ],
@@ -60,24 +60,32 @@ const router = createRouter({
           path: 'dashboard',
           component: AdminDashboardView,
           meta: {
-            title: '控制台 / 数据看板',
-            subtitle: '统一展示核心运营指标、文本问答运行、趋势曲线和操作日志，保持轻盈但专业的中台质感。',
+            title: '控制台',
+            subtitle: '查看平台运营指标、待审核医生、咨询趋势、重点告警和医生处理概览。',
           },
         },
         {
-          path: 'users',
+          path: 'users/:userId?',
           component: AdminUsersView,
           meta: {
             title: '用户管理',
-            subtitle: '用统一的大字号和高对比视图管理用户状态、画像标签和最近问诊情况。',
+            subtitle: '管理普通用户账号状态、查看健康档案与最近咨询，保障平台安全运营。',
           },
         },
         {
-          path: 'doctors',
+          path: 'doctors/:doctorId?',
           component: AdminDoctorsView,
           meta: {
             title: '医生管理',
-            subtitle: '审核、启停和擅长方向集中展示，弱化传统后台表格感，强化产品化管理体验。',
+            subtitle: '处理医生资质审核、服务状态切换、回复率统计与履约情况。',
+          },
+        },
+        {
+          path: 'consultations/:id?',
+          component: AdminConsultationsView,
+          meta: {
+            title: '咨询记录',
+            subtitle: '查看全平台问诊详情、AI 结果、医生回复、处理时间线，并支持异常标记与归档。',
           },
         },
         {
@@ -85,23 +93,15 @@ const router = createRouter({
           component: AdminSettingsView,
           meta: {
             title: '系统配置',
-            subtitle: 'Prompt 版本、医生复核开关、上传限制和提醒窗口在同一设计语言下统一编辑。',
+            subtitle: '维护模型参数、提示词模板、风险规则、上传限制、通知规则和权限配置。',
           },
         },
         {
           path: 'logs',
           component: AdminLogsView,
           meta: {
-            title: '日志统计',
-            subtitle: '操作日志与模型调用日志分层展示，便于治理、回溯和性能观察。',
-          },
-        },
-        {
-          path: 'announcements',
-          component: AdminAnnouncementsView,
-          meta: {
-            title: '公告管理',
-            subtitle: '面向医生和用户的公告入口统一收口，兼顾答辩展示与后续维护体验。',
+            title: '日志监控',
+            subtitle: '查看登录日志、操作日志、AI 调用、异常告警和系统运行趋势。',
           },
         },
       ],
@@ -111,15 +111,19 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const auth = useAuthStore()
-  if (to.path === '/login') {
-    return true
-  }
-  if (!auth.token) {
-    return '/login'
-  }
+  if (to.path === '/login') return true
+
+  if (!auth.token) return '/login'
+
   if (!auth.account) {
-    await auth.loadProfile()
+    try {
+      await auth.loadProfile()
+    } catch {
+      await auth.logout()
+      return '/login'
+    }
   }
+
   if (to.path.startsWith('/doctor') && auth.role !== 'DOCTOR') {
     return auth.role === 'ADMIN' ? '/admin/dashboard' : '/login'
   }

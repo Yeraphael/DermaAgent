@@ -11,14 +11,13 @@ from app.db import get_db
 from app.middleware import response_envelope
 from app.model import Announcement, User
 from app.routes.deps import get_current_user
-from app.service import log_operation
+from app.service import get_config_map, get_json_config, log_operation
 
 
 router = APIRouter()
 settings = get_settings()
-MAX_IMAGE_SIZE = 7 * 1024 * 1024
-ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
-ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
+DEFAULT_ALLOWED_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp"}
+DEFAULT_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 
 
 @router.get("/announcements")
@@ -49,22 +48,27 @@ async def upload_image(
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> dict:
+    config_map = get_config_map(db)
+    upload_rules = get_json_config(config_map, "upload.rules", {"max_mb": 10, "formats": ["jpg", "jpeg", "png", "webp"]})
+    max_image_size = int(upload_rules.get("max_mb", 10)) * 1024 * 1024
+    allowed_formats = {f".{str(item).lower().lstrip('.')}" for item in upload_rules.get("formats", [])} or DEFAULT_ALLOWED_SUFFIXES
+
     if not file.filename:
         raise HTTPException(status_code=400, detail="缺少文件名")
 
     suffix = ""
     if "." in file.filename:
         suffix = "." + file.filename.rsplit(".", 1)[-1].lower()
-    if suffix not in ALLOWED_SUFFIXES:
+    if suffix not in allowed_formats:
         raise HTTPException(status_code=400, detail="仅支持 JPG、PNG、WEBP 图片")
-    if file.content_type and file.content_type not in ALLOWED_IMAGE_TYPES:
+    if file.content_type and file.content_type not in DEFAULT_ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail="图片类型不合法，请上传 JPG、PNG 或 WEBP")
 
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="上传图片内容为空")
-    if len(content) > MAX_IMAGE_SIZE:
-        raise HTTPException(status_code=400, detail="图片大小不能超过 7MB")
+    if len(content) > max_image_size:
+        raise HTTPException(status_code=400, detail=f"图片大小不能超过 {upload_rules.get('max_mb', 10)}MB")
 
     target_dir = settings.upload_path / scene
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -96,4 +100,3 @@ async def upload_image(
         },
         "上传成功",
     )
-

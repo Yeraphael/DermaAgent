@@ -88,7 +88,9 @@ class ChatMessageCreateIn(BaseModel):
 
 
 class DoctorReplyIn(BaseModel):
-    content: str
+    content: str | None = None
+    first_impression: str | None = None
+    care_advice: str | None = None
     suggest_offline_visit: int = 0
     suggest_follow_up: int = 0
     doctor_remark: str | None = None
@@ -110,7 +112,16 @@ class AuditUpdateIn(BaseModel):
 
 
 class ConfigUpdateIn(BaseModel):
-    config_value: str
+    config_value: object
+
+
+class ConsultationFlagIn(BaseModel):
+    abnormal_flag: int = 1
+    abnormal_note: str | None = None
+
+
+class ConsultationArchiveIn(BaseModel):
+    archived_flag: int = 1
 
 
 class AnnouncementIn(BaseModel):

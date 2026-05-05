@@ -12,24 +12,9 @@ const auth = useAuthStore()
 
 const loading = ref(false)
 const form = reactive({
-  username: 'doctor01',
-  password: '12345678',
+  username: '',
+  password: '',
 })
-
-const presets = [
-  {
-    label: '医生端体验',
-    username: 'doctor01',
-    password: '12345678',
-    copy: '进入高保真医生工作台，查看待处理问诊、AI 结果与回复面板。',
-  },
-  {
-    label: '管理员体验',
-    username: 'admin01',
-    password: '12345678',
-    copy: '进入运营中台，管理用户、医生、文本问答运行和系统配置。',
-  },
-]
 
 async function handleLogin() {
   try {
@@ -43,11 +28,6 @@ async function handleLogin() {
     loading.value = false
   }
 }
-
-function usePreset(username: string, password: string) {
-  form.username = username
-  form.password = password
-}
 </script>
 
 <template>
@@ -55,24 +35,24 @@ function usePreset(username: string, password: string) {
     <div class="login-surface">
       <section class="login-hero">
         <BrandMark />
-        <div class="eyebrow-pill" style="margin-top: 26px;">AI 医疗科技感 · 统一设计系统</div>
-        <h1>把医生协作、AI 辅助分析与后台治理放进同一套轻盈高级的工作台。</h1>
+        <div class="eyebrow-pill" style="margin-top: 26px;">统一医疗运营工作空间</div>
+        <h1>把医生协作、平台治理和 AI 辅助分析放进同一套正式可用的后台。</h1>
         <p>
-          这次重构后的后台不再是传统深色表格堆砌，而是以设计图为基准，统一成白底、冰川蓝、浅紫和青绿点缀的高保真医疗科技风。
-          医生端强调高效处理与清晰决策，管理端强调数据运营和秩序感。
+          医生端围绕问诊处理、患者档案和 AI 复核展开，管理端围绕账号治理、咨询监管、系统配置和日志监控展开。
+          整体采用与用户端一致的浅色医疗科技风格，保证信息层级清晰、操作路径连贯。
         </p>
 
         <div class="login-hero__grid">
-          <MetricCard label="医生端" value="3 核心工作流" note="工作台 / 问诊管理 / 患者档案" accent="violet" />
-          <MetricCard label="管理端" value="6 运营模块" note="用户、医生、问答运行、配置、日志与公告" accent="sky" />
-          <MetricCard label="视觉系统" value="1 套统一 tokens" note="阴影、圆角、状态色、卡片与表单全量统一" accent="mint" />
+          <MetricCard label="医生端" value="工作台 / 问诊 / 档案" note="围绕处理效率、风险判断与连续随访。" accent="violet" />
+          <MetricCard label="管理端" value="控制台 / 运营治理" note="覆盖用户、医生、咨询、配置和日志。" accent="sky" />
+          <MetricCard label="数据闭环" value="用户端联动" note="问诊提交、医生回复和 AI 反馈实时回写。" accent="mint" />
         </div>
       </section>
 
       <section class="login-panel">
-        <p class="workspace-topbar__eyebrow">DermaAgent Control Center</p>
-        <h2>进入工作台</h2>
-        <p>使用演示账号即可进入医生端或管理端，直接查看重构后的完整业务界面。</p>
+        <p class="workspace-topbar__eyebrow">DermaAgent Workspace</p>
+        <h2>账号登录</h2>
+        <p>请输入已开通的医生或管理员账号信息，系统会根据角色自动进入对应工作空间。</p>
 
         <form class="form-stack" @submit.prevent="handleLogin">
           <div class="form-field">
@@ -88,24 +68,12 @@ function usePreset(username: string, password: string) {
           </button>
         </form>
 
-        <div class="preset-grid">
-          <button
-            v-for="item in presets"
-            :key="item.label"
-            type="button"
-            class="preset-button"
-            @click="usePreset(item.username, item.password)"
-          >
-            <strong>{{ item.label }}</strong>
-            <span>{{ item.username }} / {{ item.password }}</span>
-          </button>
+        <div class="login-panel__tips">
+          <div class="detail-card">
+            <div class="tiny-label">登录后可用能力</div>
+            <p class="detail-copy">医生可处理待办问诊、查看患者长期档案并提交专业回复；管理员可管理账号、审核医生、监管咨询流程与系统参数。</p>
+          </div>
         </div>
-
-        <p class="helper-copy" style="margin-top: 18px;">
-          演示说明：
-          <span class="accent-text">当前登录流程为可运行的本地 mock 数据驱动</span>，
-          后续可平滑接回真实接口层而不影响本套页面结构。
-        </p>
       </section>
     </div>
   </div>
